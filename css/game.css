@@ -149,3 +149,6 @@ body.touch #objs h4{margin-bottom:3px}
 body.touch #objs .o{font-size:12px}
 body.touch #objs .more{font-size:10px;color:var(--dim);margin-top:3px}
 body.touch #zone{top:122px}
+
+#fsBtn{position:fixed;right:12px;top:198px;z-index:40;width:34px;height:34px;border-radius:6px;border:1px solid rgba(220,190,110,.35);background:rgba(8,8,10,.7);color:#d9c07a;font-size:18px;line-height:1;cursor:pointer;pointer-events:auto;padding:0}
+#fsBtn:hover,#fsBtn.on{background:rgba(40,34,18,.85);border-color:rgba(220,190,110,.8)}

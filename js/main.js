@@ -36,3 +36,31 @@ async function begin(seed) {
   requestAnimationFrame(loop);
   if (q.get('seed') && (q.get('go') || q.get('skip'))) begin(+q.get('seed')); else { game.seedHint = +q.get('seed') || 0 || undefined; ui.title(s => begin(s)); }
 })();
+
+// Fullscreen toggle (button + V key); hidden where the API is unavailable (e.g. iPhone Safari)
+{
+  const el = document.documentElement;
+  const req = el.requestFullscreen || el.webkitRequestFullscreen;
+  if (req) {
+    const btn = document.createElement('button');
+    btn.id = 'fsBtn'; btn.type = 'button'; btn.title = 'Fullscreen (V)'; btn.textContent = '⛶';
+    document.body.appendChild(btn);
+    const isFs = () => document.fullscreenElement || document.webkitFullscreenElement;
+    const toggle = () => {
+      try {
+        if (isFs()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+        else {
+          const p = req.call(el);
+          p && p.catch && p.catch(() => {});
+          try { screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {}); } catch (e) {}
+        }
+      } catch (e) {}
+    };
+    btn.addEventListener('click', e => { e.stopPropagation(); toggle(); btn.blur(); });
+    btn.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
+    addEventListener('keydown', e => { if (e.code === 'KeyV' && !e.repeat && !e.ctrlKey && !e.metaKey) toggle(); });
+    const sync = () => { btn.classList.toggle('on', !!isFs()); };
+    document.addEventListener('fullscreenchange', sync);
+    document.addEventListener('webkitfullscreenchange', sync);
+  }
+}

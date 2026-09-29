@@ -14,7 +14,7 @@ Static site, no build step. Serve the repo root (`python3 -m http.server`) and o
 | WASD | Move · **Shift** run · **C** crouch · **Space** jump/slide |
 | **F** | Context action (pick lock, hack, takedown, pickpocket, vent, loot…) |
 | 1–3 / click | Dart pistol · coin distraction · EMP |
-| G | Night vision · **Q/E** rotate camera · **M** mute · Esc pause |
+| G | Night vision · **Q/E** rotate camera · **M** mute · **V** fullscreen · Esc pause |
 
 Mobile: floating joystick, context ACTION button, crouch/run/gadget/fire/NVG buttons, two-finger twist/pinch camera.
 
