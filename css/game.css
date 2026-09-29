@@ -206,3 +206,4 @@ body.touch #status{top:50px}
 body.touch #disg .dn b{font-size:9.5px;white-space:nowrap}
 body.touch:not(.inplay) #fsBtn{left:auto;right:calc(10px + env(safe-area-inset-right));top:8px}
 body:not(.inplay) #fsBtn{top:12px}
+body.touch #toasts{top:104px}

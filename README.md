@@ -21,8 +21,8 @@ Mobile: floating joystick, context ACTION button, crouch/run/gadget/fire/NVG but
 ## Mechanics
 - **Real lighting = real visibility.** A CPU light field with shadows lights every surface *and* drives guard perception. Shoot out lamps, trip breakers, stay in the dark.
 - **Guards** patrol, hear, investigate, search, alert; **cameras** sweep; **laser grids** have high/mid/low beams and static/blink/sweep patterns (crouch, slide, jump).
-- **Social stealth:** steal uniforms (waiter, staff, exec…) — each zone (public/staff/restricted/vault) has different rules, and witnesses notice bodies and trespassing.
-- **Vents:** crawl a separate duct network, peek through grates.
+- **Social stealth:** steal uniforms (waiter, staff, exec…) — each zone (public/staff/restricted/vault) has different rules, and witnesses notice bodies and trespassing. A **cover meter** drains when you loiter near people, run/crouch/carry in uniform, stand somewhere the uniform isn't allowed, or meet someone who knows it. At zero your cover is blown until you change clothes or lie low.
+- **Vents:** 20 grates and a translucent duct network you crawl through prone. You are completely undetectable (unseen and unheard) inside, and can peek into rooms through grates.
 - **Non-lethal takedowns**, carry and stash bodies in lockers/dumpsters, lockdown + reinforcements if things go loud.
 - **Procedural contract per seed:** who holds the keycard, where the vault code comes from, patrols, lasers, cameras. Graded S–D.
 - Procedural WebAudio noir jazz, synthesized SFX.

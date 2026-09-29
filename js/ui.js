@@ -214,6 +214,8 @@ export class UI {
     // vents when inside
     if (g.player.inVent && g.vent) { c.fillStyle = 'rgba(140,200,255,.6)'; for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (g.vent.carved[y * W + x]) c.fillRect(ox + x * S, oy + y * S, S, S); }
     for (const d of L.doors) { const ti = (d.y * LM + 1) * V.tw + (d.x * LM + 1); if (V.explored[ti]) { c.fillStyle = d.lock && !d.unlocked ? '#ff8a5a' : '#c9a23a'; c.fillRect(ox + d.x * S - 0.5, oy + d.y * S - 0.5, S + 1, S + 1); } }
+    // vent grates: known ones (explored) or all while crawling
+    for (const gr of Object.values(g.ventGrates || {})) { const ti = (Math.floor(gr.exitAt.y) * LM + 1) * V.tw + (Math.floor(gr.exitAt.x) * LM + 1); if (!g.player.inVent && !V.explored[ti]) continue; c.fillStyle = gr.open ? '#9fe8ff' : '#5fb0d0'; c.fillRect(ox + gr.ventCell.x * S - 0.6, oy + gr.ventCell.y * S - 0.6, S + 1.2, S + 1.2); }
     // objective hint
     const next = g.objectives.find(o => !o.done && !o.optional && o.hint);
     if (next) { const t = (performance.now() / 600) % 2, r = 2 + t * 3; c.strokeStyle = 'rgba(231,198,106,' + (1 - t / 2) + ')'; c.lineWidth = 1.4; c.beginPath(); c.arc(ox + next.hint.x * S, oy + next.hint.y * S, r, 0, 7); c.stroke(); c.fillStyle = '#e7c66a'; c.fillRect(ox + next.hint.x * S - 1.5, oy + next.hint.y * S - 1.5, 3, 3); }

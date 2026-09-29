@@ -181,7 +181,7 @@ export class Game {
     const out = [];
     for (const g of this.guards) if (g.torchOn && g.state !== 'down') out.push(g.torchLight());
     for (const c of this.cameras) if (c.on && !c.disabled) out.push(c.light());
-    if (this.player && this.player.inVent) out.push({ x: this.player.x, y: this.player.y, z: 1.6, color: [0.45, 0.8, 1.0], intensity: 1.2, range: 4.0, noShadow: true });
+    if (this.player && this.player.inVent) out.push({ x: this.player.x, y: this.player.y, z: 1.6, color: [0.45, 0.8, 1.0], intensity: 0.4, range: 3.2, noShadow: true });
     if (this.alert.level >= 3) {
       const t = this.time * 3;
       for (const l of this.level.lights) if (l.alarm) out.push({ x: l.x, y: l.y, z: 2.5, color: [1, 0.1, 0.08], intensity: 0.6 * (0.5 + 0.5 * Math.sin(t + l.x)), range: 7 });
