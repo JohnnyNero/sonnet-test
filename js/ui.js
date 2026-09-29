@@ -20,16 +20,16 @@ export class UI {
         <div id="zone" class="neutral">Outside</div>
         <div id="disg"></div>
         <div id="pips"><i></i><i></i><i></i></div>
-        <div id="gem" class="panel"><div class="top"><div id="gemDot"></div><div><div class="lbl" id="gemLbl">HIDDEN</div><div class="sub" id="gemSub">Stealth: standing</div></div></div><div class="bar"><i id="noiseBar"></i></div></div>
+        <div id="gem" class="panel"><div class="top"><div id="gemDot"></div><div><div class="lbl" id="gemLbl">HIDDEN</div><div class="sub" id="gemSub">Stealth: standing</div></div></div><div class="row"><span>LIGHT</span><b id="lightPct">0%</b></div><div class="bar"><i id="lightBar"></i></div><div class="row n"><span>NOISE</span></div><div class="bar thin"><i id="noiseBar"></i></div></div>
         <div id="bar"></div>
         <div id="prompt"></div>
         <div id="toasts"></div>
       </div>
       <div id="screen" class="screen"><div class="card"><h2 class="serif">Loading</h2></div></div>`;
     this.hud = $(root, '#hud'); this.screenEl = $(root, '#screen');
-    this.el = { objs: $(root, '#objList'), alert: $(root, '#alert'), mini: $(root, '#mini'), zone: $(root, '#zone'), disg: $(root, '#disg'), pips: $(root, '#pips'), gemDot: $(root, '#gemDot'), gemLbl: $(root, '#gemLbl'), gemSub: $(root, '#gemSub'), noiseBar: $(root, '#noiseBar'), bar: $(root, '#bar'), prompt: $(root, '#prompt'), toasts: $(root, '#toasts'), marks: $(root, '#marks'), vig: $(root, '#vig') };
+    this.el = { objs: $(root, '#objList'), alert: $(root, '#alert'), mini: $(root, '#mini'), zone: $(root, '#zone'), disg: $(root, '#disg'), pips: $(root, '#pips'), gemDot: $(root, '#gemDot'), gemLbl: $(root, '#gemLbl'), gemSub: $(root, '#gemSub'), noiseBar: $(root, '#noiseBar'), lightBar: $(root, '#lightBar'), lightPct: $(root, '#lightPct'), bar: $(root, '#bar'), prompt: $(root, '#prompt'), toasts: $(root, '#toasts'), marks: $(root, '#marks'), vig: $(root, '#vig') };
     this.mctx = this.el.mini.getContext('2d');
-    this.marks = new Map(); this.miniT = 0; this.objSig = ''; this.barSig = ''; this.noiseVis = 0; this.isTouch = false;
+    this.marks = new Map(); this.miniT = 0; this.objSig = ''; this.barSig = ''; this.noiseVis = 0; this.lightVis = 0; this.isTouch = false;
   }
 
   // ------------------------------------------------------------------------------------------ screens
@@ -147,6 +147,8 @@ export class UI {
     const st = lum < 0.07 ? ['HIDDEN', '#6f8cff'] : lum < 0.2 ? ['SHADOWED', '#8aa0c8'] : lum < 0.45 ? ['DIM', '#d8d0a8'] : ['EXPOSED', '#ffd870'];
     this.el.gemLbl.textContent = st[0]; this.el.gemLbl.style.color = st[1];
     this.el.gemDot.style.background = `radial-gradient(circle, ${st[1]} ${Math.round(expo * 65)}%, #000 100%)`; this.el.gemDot.style.borderColor = st[1]; this.el.gemDot.style.color = st[1];
+    this.lightVis += (expo - this.lightVis) * Math.min(1, dt * 10);
+    this.el.lightBar.style.width = (this.lightVis * 100).toFixed(0) + '%'; this.el.lightBar.style.background = st[1]; this.el.lightPct.textContent = (this.lightVis * 100).toFixed(0) + '%';
     this.el.gemSub.textContent = p.inVent ? 'In the vents' : p.carrying ? 'Carrying a body' : p.slide ? 'Sliding' : p.running ? 'Running: loud' : p.stance === 'crouch' ? 'Crouched: quiet' : p.speed > 0.3 ? 'Walking' : 'Standing still';
     const noise = p.inVent ? 0.08 : p.running ? 1 : p.speed < 0.3 ? 0 : p.stance === 'crouch' ? 0.18 : 0.42;
     this.noiseVis += (noise - this.noiseVis) * Math.min(1, dt * 8); this.el.noiseBar.style.width = (this.noiseVis * 100).toFixed(0) + '%'; this.el.noiseBar.style.background = this.noiseVis > 0.7 ? '#ff7a58' : '#7ab8ff';

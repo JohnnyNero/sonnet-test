@@ -179,15 +179,12 @@ export class VisionMask {
     this.texData = new Uint8Array(n * 4); this.version = 0;
     this._prev = []; this._win = null;
   }
-  update(px, py, radius, level = null, peek = null) {
+  update(px, py, radius, level = null, peek = null, dt = 1 / 60) {
     const { tw, th, vis, explored, texData } = this;
+    const tgt = this.tgt || (this.tgt = new Float32Array(tw * th));
     const L = level || this.L;
-    for (const i of this._prev) { vis[i] = 0; }
+    for (const i of this._prev) { tgt[i] = 0; }
     this._prev.length = 0;
-    if (this._win) {                       // wipe last frame's window (explored memory is kept in the G channel)
-      const [a, b, c, d] = this._win;
-      for (let ty = c; ty <= d; ty++) for (let tx = a; tx <= b; tx++) texData[(ty * tw + tx) * 4] = 0;
-    }
     let x0 = Math.max(0, Math.floor((px - radius) * LM)), x1 = Math.min(tw - 1, Math.ceil((px + radius) * LM));
     let y0 = Math.max(0, Math.floor((py - radius) * LM)), y1 = Math.min(th - 1, Math.ceil((py + radius) * LM));
     for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
@@ -199,7 +196,7 @@ export class VisionMask {
       if (!r.hit) v = 1; else { const d = Math.sqrt(d2); if (r.t > d - 0.75) v = 0.9; }
       if (v > 0) {
         const edge = 1 - smooth(radius * 0.72, radius, Math.sqrt(d2));
-        v *= edge; const i = ty * tw + tx; vis[i] = v; this._prev.push(i);
+        v *= edge; const i = ty * tw + tx; tgt[i] = v; this._prev.push(i);
         if (v > 0.5) explored[i] = 1;
       }
     }
@@ -207,14 +204,23 @@ export class VisionMask {
     const wx0 = peek ? Math.min(x0, Math.floor((peek.x - peek.radius) * LM)) : x0, wx1 = peek ? Math.max(x1, Math.ceil((peek.x + peek.radius) * LM)) : x1;
     const wy0 = peek ? Math.min(y0, Math.floor((peek.y - peek.radius) * LM)) : y0, wy1 = peek ? Math.max(y1, Math.ceil((peek.y + peek.radius) * LM)) : y1;
     x0 = Math.max(0, wx0); x1 = Math.min(tw - 1, wx1); y0 = Math.max(0, wy0); y1 = Math.min(th - 1, wy1);
-    this._win = [Math.max(1, x0 - 1), Math.min(tw - 2, x1 + 1), Math.max(1, y0 - 1), Math.min(th - 2, y1 + 1)];
+    const nw = [Math.max(1, x0 - 1), Math.min(tw - 2, x1 + 1), Math.max(1, y0 - 1), Math.min(th - 2, y1 + 1)];
+    const o = this._win || nw;
+    const ux0 = Math.min(o[0], nw[0]), ux1 = Math.max(o[1], nw[1]), uy0 = Math.min(o[2], nw[2]), uy1 = Math.max(o[3], nw[3]);
+    this._win = nw;
+    // temporal smoothing: visibility eases toward this frame's ray results so shadow edges glide instead of crawling
+    const k = 1 - Math.exp(-dt * 14);
+    for (let ty = uy0; ty <= uy1; ty++) for (let tx = ux0; tx <= ux1; tx++) {
+      const i = ty * tw + tx; let c = vis[i]; c += (tgt[i] - c) * k; vis[i] = c < 0.004 ? 0 : c;
+    }
     // soften: 3x3 tent over the touched window + write the texture
     const tmp = this._tmp || (this._tmp = new Float32Array(tw * th));
-    for (let ty = Math.max(1, y0 - 1); ty <= Math.min(th - 2, y1 + 1); ty++) for (let tx = Math.max(1, x0 - 1); tx <= Math.min(tw - 2, x1 + 1); tx++) {
+    const bx0 = Math.max(1, ux0 - 1), bx1 = Math.min(tw - 2, ux1 + 1), by0 = Math.max(1, uy0 - 1), by1 = Math.min(th - 2, uy1 + 1);
+    for (let ty = by0; ty <= by1; ty++) for (let tx = bx0; tx <= bx1; tx++) {
       const i = ty * tw + tx;
       tmp[i] = (vis[i] * 4 + vis[i - 1] + vis[i + 1] + vis[i - tw] + vis[i + tw]) / 8;
     }
-    for (let ty = Math.max(1, y0 - 1); ty <= Math.min(th - 2, y1 + 1); ty++) for (let tx = Math.max(1, x0 - 1); tx <= Math.min(tw - 2, x1 + 1); tx++) {
+    for (let ty = by0; ty <= by1; ty++) for (let tx = bx0; tx <= bx1; tx++) {
       const i = ty * tw + tx, q = i * 4; texData[q] = (Math.min(1, tmp[i]) * 255) | 0; texData[q + 1] = explored[i] ? 255 : 0; texData[q + 2] = 0; texData[q + 3] = 255;
     }
     this.version++;
@@ -228,7 +234,7 @@ export class VisionMask {
       const qx = (tx + 0.5) / LM, qy = (ty + 0.5) / LM, d = Math.hypot(qx - px, qy - py); if (d > radius) continue;
       const r = L.ray(px, py, qx, qy); let v = r.hit ? (r.t > d - 0.75 ? 0.9 : 0) : 1;
       if (v <= 0) continue; v *= 1 - smooth(radius * 0.7, radius, d);
-      const i = ty * tw + tx; if (v > vis[i]) { vis[i] = v; this._prev.push(i); if (v > 0.5) explored[i] = 1; }
+      const i = ty * tw + tx; if (v > this.tgt[i]) { this.tgt[i] = v; this._prev.push(i); if (v > 0.5) explored[i] = 1; }
     }
   }
   // cheap point test used to hide enemies the player cannot see

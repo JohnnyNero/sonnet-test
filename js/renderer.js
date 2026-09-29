@@ -241,6 +241,9 @@ export class Renderer {
     this.camera.position.copy(c.target).add(off);
     if (c.shake > 0) { this.camera.position.x += (Math.random() - 0.5) * c.shake; this.camera.position.y += (Math.random() - 0.5) * c.shake; c.shake = Math.max(0, c.shake - dt * 2); }
     this.camera.lookAt(c.target);
+    // keep the depth range tight: floor detail is millimetres thick and z-fights ("tripping") with a wide range
+    const near = Math.max(0.5, c.dist * 0.5 - 3), far = c.dist * 3 + 60;
+    if (Math.abs(near - this.camera.near) > 0.05 || Math.abs(far - this.camera.far) > 0.5) { this.camera.near = near; this.camera.far = far; this.camera.updateProjectionMatrix(); }
   }
 
   // Lower the walls that sit between the camera and the player so the action is always visible.

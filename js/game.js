@@ -213,8 +213,8 @@ export class Game {
       // see along the ducts, and down into the room when passing under a grate
       let peek = null;
       for (const gr of Object.values(this.ventGrates || {})) { if (Math.hypot(P.x - (gr.ventCell.x + 0.5), P.y - (gr.ventCell.y + 0.5)) < 0.9) { peek = { x: gr.exitAt.x, y: gr.exitAt.y, radius: 9, level: this.level }; break; } }
-      this.vision.update(eye.x, eye.y, 5.5, this.vent, peek);
-    } else this.vision.update(eye.x, eye.y, 15);
+      this.vision.update(eye.x, eye.y, 5.5, this.vent, peek, dt);
+    } else this.vision.update(eye.x, eye.y, 15, null, null, dt);
 
     // rendering sync
     for (const a of this.actors) {
