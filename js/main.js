@@ -22,8 +22,8 @@ async function begin(seed) {
   await game.startMission(builder, seed);
   game.paused = true;
   ui.loading(null);
-  if (q.get('go') || q.get('skip')) { game.paused = false; ui.hideScreen(); ui.showHud(true); }
-  else ui.briefing(game, () => { game.paused = false; });
+  if (q.get('go') || q.get('skip')) { game.paused = false; ui.hideScreen(); ui.showHud(true); game.audioUnlock(); }
+  else ui.briefing(game, () => { game.paused = false; game.audioUnlock(); });
   window.__mission = true;
 }
 

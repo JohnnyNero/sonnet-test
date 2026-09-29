@@ -70,12 +70,14 @@ export function setupTouch(game, ui) {
 
   return {
     update(dt) {
-      const P = game.player; if (!P) return;
+      const P = game.player;
+      const active = P && game.state === 'play' && !game.paused;
+      root.style.display = active ? 'block' : 'none';
+      if (!active) return;
       if (rotL) game.R.rotateCamera(1.8 * dt); if (rotR) game.R.rotateCamera(-1.8 * dt);
       const pr = P.prompt; const a = $('#tAct'); a.textContent = pr && !pr.busy ? (pr.label.length > 18 ? pr.label.slice(0, 17) + '…' : pr.label) : pr && pr.busy ? 'Working…' : 'ACTION';
       a.style.opacity = pr ? 1 : 0.6;
       $('#tGad').textContent = NAMES[GADGETS[P.gadget]];
-      root.style.display = game.state === 'play' && !game.paused ? '' : 'none';
     },
   };
 }

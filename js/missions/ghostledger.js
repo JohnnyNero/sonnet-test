@@ -40,19 +40,20 @@ export async function buildGhostLedger(game, seed) {
   roomDef('kitchen', 8, 40, 14, 12, { zone: 'staff', floor: 'tile', wall: 'tile' });
   roomDef('lockers', 23, 40, 8, 12, { zone: 'staff', floor: 'concrete', wall: 'concrete' });
   roomDef('storage', 8, 34, 10, 5, { zone: 'staff', floor: 'concrete', wall: 'concrete' });
-  roomDef('service', 32, 22, 3, 30, { zone: 'staff', floor: 'concrete', wall: 'concrete' });
+  roomDef('service', 32, 19, 3, 33, { zone: 'staff', floor: 'concrete', wall: 'concrete' });
   roomDef('gala', 36, 27, 28, 23, { zone: 'public', floor: 'marble', wall: 'panel' });
   roomDef('foyer', 43, 50, 10, 2, { zone: 'public', floor: 'marble', wall: 'panel' });
   roomDef('lounge', 40, 22, 20, 4, { zone: 'public', floor: 'wood', wall: 'panel' });
   roomDef('vault_lobby', 40, 14, 20, 7, { zone: 'restricted', floor: 'carpet', wall: 'plaster' });
   roomDef('laser_hall', 46, 8, 8, 5, { zone: 'restricted', floor: 'metal', wall: 'concrete' });
   roomDef('vault', 40, 1, 20, 6, { zone: 'vault', floor: 'metal', wall: 'vault' });
-  roomDef('ocorr', 65, 16, 3, 32, { zone: 'restricted', floor: 'carpet', wall: 'plaster' });
+  roomDef('ocorr', 65, 14, 3, 34, { zone: 'restricted', floor: 'carpet', wall: 'plaster' });
   roomDef('openplan', 69, 36, 20, 12, { zone: 'restricted', floor: 'carpet', wall: 'plaster' });
   roomDef('security', 69, 24, 9, 10, { zone: 'restricted', floor: 'tile', wall: 'plaster' });
   roomDef('server', 79, 24, 10, 10, { zone: 'restricted', floor: 'metal', wall: 'concrete' });
   roomDef('exec', 69, 9, 19, 12, { zone: 'restricted', floor: 'wood', wall: 'panel' });
   roomDef('roof', 62, 1, 32, 7, { zone: 'outside', floor: 'concrete', wall: 'concrete' });
+  roomDef('lobby_link', 33, 18, 6, 1, { zone: 'restricted', floor: 'carpet', wall: 'plaster' });   // service corridor -> vault lobby (west route)
   const room = n => M.byName[n];
 
   // ================================================================================================ doors
@@ -67,7 +68,7 @@ export async function buildGhostLedger(game, seed) {
   D(47, 52, 'h', { glass: true, model: 'glass' });                                 // front entrance
   D(49, 26, 'h', { glass: true, model: 'glass' });                                 // gala <-> lounge
   D(50, 21, 'h', { lock: 'keycard', model: 'security', tag: 'lobby', group: 'vaultwing' });  // lounge -> vault lobby
-  D(34, 21, 'h', { lock: 'keycard', model: 'security', tag: 'lobby2', group: 'vaultwing' }); // service -> lobby route (via west)
+  D(39, 18, 'v', { lock: 'keycard', model: 'security', tag: 'lobby2', group: 'vaultwing' }); // service corridor -> vault lobby (west route)
   D(50, 13, 'h', { model: 'security' });                                           // lobby -> laser hall
   D(64, 40, 'v', { model: 'security' });                                           // gala -> office corridor
   D(68, 41, 'v', {});                                                              // ocorr -> open plan
@@ -75,8 +76,6 @@ export async function buildGhostLedger(game, seed) {
   D(78, 28, 'v', {});                                                              // security <-> server
   D(68, 15, 'v', { lock: 'hack', model: 'security', tag: 'exec' });                // ocorr -> exec
   D(74, 8, 'h', { lock: 'hack', model: 'security', tag: 'roof' });                 // exec -> roof
-  // service corridor -> vault lobby route needs a carved cell chain: corridor top meets lobby's west side
-  M.strip('lobby_link', 33, 17, 7, 2, { zone: 'restricted', floor: 'carpet', wall: 'plaster' });
   // vault door: 3 cells
   const vaultCells = [49, 50, 51].map(x => D(x, 7, 'h', { lock: 'vault', model: 'vault', tag: 'vault' }));
   vaultCells.forEach(d => { d.vault = true; d.glass = false; });
@@ -226,17 +225,17 @@ export async function buildGhostLedger(game, seed) {
     put('sofa_2', 42, 19, 0); put('coffee_table', 45, 19, 0); put('sofa_2', 54, 19, 0); put('filing_cabinet', 56, 16, 0, { }); put('water_cooler', 41, 17, 0);
     wallMount('keypad_wall', 50.0 - 1.5, 21.0, 'N', 1.2);
     put('statue_bust', 43, 15, 0);
-    room('lobby_link'); lampGrid(room('lobby_link'), 3, 2, [0.75, 0.86, 1.0], 0.6, 5, { wing: 'vault' });
+    room('lobby_link'); lampGrid(room('lobby_link'), 3, 1, [0.75, 0.86, 1.0], 0.6, 5, { wing: 'vault' });
   }
   {
     const r = room('laser_hall');
-    lamp(50, 10, [0.45, 0.7, 1.0], 0.9, 7, { z: 3, wing: 'vault', breakable: true, emergency: false }); lamp(48, 12, [1.0, 0.25, 0.25], 0.25, 6, { z: 2.5, wing: 'vault', emergency: true, breakable: false }); lamp(52, 9, [1.0, 0.25, 0.25], 0.22, 6, { z: 2.5, wing: 'vault', emergency: true, breakable: false });
+    lamp(50, 10, [0.45, 0.7, 1.0], 0.9, 7, { z: 3, wing: 'vault', breakable: true, emergency: false }); lamp(48, 12, [1.0, 0.25, 0.25], 0.25, 6, { z: 2.5, wing: 'vault', emergency: true, alarm: true, breakable: false }); lamp(52, 9, [1.0, 0.25, 0.25], 0.22, 6, { z: 2.5, wing: 'vault', emergency: true, alarm: true, breakable: false });
   }
   const vaultLoot = [];
   {
     const r = room('vault');
     lamp(44, 4, [0.9, 0.95, 1.0], 0.9, 9, { z: 3, wing: 'vault', breakable: true }); lamp(56, 4, [0.9, 0.95, 1.0], 0.9, 9, { z: 3, wing: 'vault', breakable: true }); lamp(50, 3, [1.0, 0.85, 0.5], 0.7, 8, { z: 3, wing: 'vault', breakable: true });
-    lamp(43, 5, [1.0, 0.25, 0.25], 0.2, 6, { z: 2.5, wing: 'vault', emergency: true, breakable: false });
+    lamp(43, 5, [1.0, 0.25, 0.25], 0.2, 6, { z: 2.5, wing: 'vault', emergency: true, alarm: true, breakable: false });
     put('safe_deposit_wall', 41, 1, 0, { force: true }); put('safe_deposit_wall', 43, 1, 0, { force: true }); put('safe_deposit_wall', 55, 1, 0, { force: true }); put('safe_deposit_wall', 57, 1, 0, { force: true });
     // loot
     vaultLoot.push(['cash_pallet', 46, 3, 1], ['cash_pallet', 48, 4, 1], ['cash_pallet', 52, 4, 1], ['cash_pallet', 54, 3, 1], ['gold_bar_stack', 46, 5, 1], ['gold_bar_stack', 54, 5, 1], ['briefcase', 44, 6, 1], ['loot_bag', 56, 6, 1]);
@@ -265,7 +264,7 @@ export async function buildGhostLedger(game, seed) {
   {
     const r = room('server'); lampGrid(r, 5, 5, [0.5, 0.8, 1.0], 0.55, 6.5, { wing: 'office', breakable: true });
     for (let y of [25, 28, 31]) for (const x of [81, 84, 87]) put('server_rack', x, y, 0);
-    lamp(85, 27, [0.2, 1.0, 0.5], 0.3, 5, { z: 1.2, wing: 'office', emergency: true, breakable: false });
+    lamp(85, 27, [0.2, 1.0, 0.5], 0.3, 5, { z: 1.2, wing: 'office', emergency: true, alarm: true, breakable: false });
   }
   {
     const r = room('exec'); lampGrid(r, 6, 5, [1.0, 0.82, 0.55], 0.85, 8, { wing: 'office', breakable: true });
@@ -391,6 +390,7 @@ export async function buildGhostLedger(game, seed) {
   const intelCode = { key: 'code', label: 'Vault code', value: contract.vaultCode };
   const intelSafe = { key: 'safe', label: 'Safe combination', value: contract.safeCode };
   const secTerm = new Terminal(game, { x: 75.5, y: 26.5, rot: 0, type: 'security', label: 'Camera control', difficulty: 2, group: null, y0: 0.0, scale: 1 });
+  new Terminal(game, { x: 76.6, y: 30.5, rot: -Math.PI / 2, type: 'alarm', label: 'Lockdown override', difficulty: 2 });
   const srvTerm = new Terminal(game, { x: 86.5, y: 32.0, rot: Math.PI, type: 'lasers', label: 'Laser grid controller', difficulty: 3, group: 'vault' });
   if (contract.codeSource === 'laptop') new Terminal(game, { x: 77.6, y: 12.6, rot: 0, type: 'intel', label: "Director's laptop", difficulty: 2, model: 'laptop', scale: 1.8, y0: 0.72, intel: intelCode });
   else new Terminal(game, { x: 77.6, y: 12.6, rot: 0, type: 'intel', label: "Director's laptop (safe combination)", difficulty: 2, model: 'laptop', scale: 1.8, y0: 0.72, intel: intelSafe });
@@ -532,7 +532,6 @@ export async function buildGhostLedger(game, seed) {
   game.failMission = (why) => {
     if (game.mission.ended) return; game.mission.ended = true; game.state = 'result'; game.player.state = 'down'; game.ui.result(false, why);
   };
-  game.clearLockdown = () => { game.alert.level = 1; game.alert.timer = 20; };
   game.disguiseOK = (P, zone) => { const dz = { none: [], guest: ['public'], waiter: ['public', 'staff'], chef: ['public', 'staff'], staff: ['public', 'staff', 'restricted'], guard: ['public', 'staff', 'restricted'], exec: ['public', 'restricted'] }; return (dz[P.disguise] || []).includes(zone); };
   return game.mission;
 }

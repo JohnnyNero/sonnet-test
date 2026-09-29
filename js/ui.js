@@ -95,7 +95,7 @@ export class UI {
   }
 
   result(success, why) {
-    const g = this.game, s = g.stats; this.showHud(false); this.screenEl.classList.remove('hidden');
+    const g = this.game, s = g.stats; g.audio && g.audio.stopMusic(); this.showHud(false); this.screenEl.classList.remove('hidden');
     const secs = Math.round(s.time), tm = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
     let grade = 'F', pts = 0;
     if (success) {
@@ -124,7 +124,12 @@ export class UI {
     const p = g.player; if (!p) return;
     // objectives (rebuild only on change)
     const sig = g.objectives.map(o => (o.done ? 1 : 0)).join('') + g.objectives.length;
-    if (sig !== this.objSig) { this.objSig = sig; this.el.objs.innerHTML = g.objectives.map(o => `<div class="o ${o.done ? 'done' : ''} ${o.optional ? 'opt' : ''}">${o.id === 'ghost' ? (g.stats.ghost || o.done ? o.text : '<s>' + o.text + '</s>') : o.text}</div>`).join(''); }
+    if (sig !== this.objSig) {
+      this.objSig = sig;
+      const cur = g.objectives.find(o => !o.done && !o.optional);
+      this.el.objs.innerHTML = g.objectives.map(o => `<div class="o ${o.done ? 'done' : ''} ${o.optional ? 'opt' : ''} ${o === cur ? 'cur' : ''}">${o.id === 'ghost' ? (g.stats.ghost || o.done ? o.text : '<s>' + o.text + '</s>') : o.text}</div>`).join('') + (this.isTouch ? '<div class="more">tap to expand</div>' : '');
+      if (this.isTouch && !this.objBound) { this.objBound = true; const panel = $(this.root, '#objs'); panel.classList.add('compact'); panel.addEventListener('pointerdown', () => { panel.classList.toggle('compact'); }); }
+    }
     // alert
     const A = g.alert, names = ['Undetected', 'Caution', 'ALERT', 'LOCKDOWN'];
     this.el.alert.className = 'l' + A.level; this.el.alert.textContent = names[A.level] + (A.level >= 3 ? ` ${Math.floor(A.lockdown)}s` : '');

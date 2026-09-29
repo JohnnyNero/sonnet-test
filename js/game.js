@@ -9,13 +9,14 @@ import { initCharacters, setBaseURL } from './characters.js';
 import { RNG } from './util.js';
 import { prepareObject, shared } from './materials.js';
 import { FX } from './fx.js';
+import { Audio } from './audio.js';
 
 export class Game {
   constructor(canvas) {
     this.canvas = canvas;
     this.R = new Renderer(canvas);
     this.input = new Input(canvas, this);
-    this.ui = null; this.audio = null;
+    this.ui = null; this.audio = new Audio(this);
     this.fx = new FX(this.R);
     this.state = "loading";
     this.time = 0; this.paused = false;
@@ -30,8 +31,11 @@ export class Game {
     this.alert = { level: 0, timer: 0, heat: 0, lastKnown: null, lockdown: 0 };
     this.stats = { alerts: 0, spotted: 0, knockouts: 0, bodiesFound: 0, camsTripped: 0, lasersTripped: 0, darts: 0, time: 0, loot: 0, ghost: true, disguises: 0 };
     this.mission = null; this.objectives = [];
-    this.lightsOut = new Set();
+    this.lightsOut = new Set(); this.reinforcements = 0;
+    this.alert.exposedT = 0; this.alert.calmT = 0;
   }
+
+  audioUnlock() { this.audio.init(); if (this.state === 'play') this.audio.startMusic(); }
 
   // ------------------------------------------------------------------------------------------------ loading
   async load(onProgress) {
@@ -99,20 +103,51 @@ export class Game {
   }
   updateAlert(dt) {
     const A = this.alert;
+    const seers = this.guards.filter(g => g.state === 'alert' && g.seesPlayer).length;
+    A.exposedT = seers ? A.exposedT + dt : Math.max(0, A.exposedT - dt * 0.5);
+    if (A.level === 2 && A.exposedT > 16) this.triggerLockdown('You were seen for too long');
     if (A.level > 0 && A.level < 3) {
-      const anySees = this.guards.some(g => g.state === 'alert' && g.seesPlayer);
-      if (!anySees) { A.timer -= dt; if (A.timer <= 0) { A.level = Math.max(0, A.level - 1); A.timer = A.level ? 30 : 0; this.toast(A.level ? 'They lost you. Still searching' : 'Things are calming down', 'info'); } }
+      if (!seers) { A.timer -= dt; if (A.timer <= 0) { A.level = Math.max(0, A.level - 1); A.timer = A.level ? 30 : 0; this.toast(A.level ? 'They lost you. Still searching' : 'Things are calming down', 'info'); } }
       else A.timer = Math.max(A.timer, 20);
     }
-    if (A.level === 3) { A.lockdown += dt; }
+    if (A.level === 3) {
+      A.lockdown += dt;
+      A.calmT = seers ? 0 : A.calmT + dt;
+      if (A.calmT > 40) this.clearLockdown();
+      if (A.lockdown > 12 && this.reinforcements < 1) this.spawnReinforcements(2);
+      if (A.lockdown > 32 && this.reinforcements < 4) this.spawnReinforcements(2);
+    }
     shared.uAlarm.value += ((A.level >= 3 ? 1 : A.level === 2 ? 0.45 : 0) - shared.uAlarm.value) * Math.min(1, dt * 3);
     this.R.grade.uniforms.uAlarm.value = shared.uAlarm.value;
+  }
+  triggerLockdown(why) {
+    const A = this.alert; if (A.level >= 3) return;
+    this.raiseAlert(3, A.lastKnown, why); A.lockdown = 0; A.calmT = 0; this.stats.lockdowns = (this.stats.lockdowns || 0) + 1;
+    for (const d of this.level.doors) if (!d.vault) { d.alarm = true; }
+    this.level.invalidateNav();
+    this.audio && this.audio.alarm && this.audio.alarm();
+  }
+  clearLockdown() {
+    const A = this.alert; if (A.level < 3) return;
+    A.level = 1; A.timer = 30; A.lockdown = 0;
+    for (const d of this.level.doors) d.alarm = false;
+    this.level.invalidateNav(); this.toast('Lockdown lifted', 'good');
+  }
+  async spawnReinforcements(n) {
+    this.reinforcements += n;
+    const { Guard } = await import('./guard.js');
+    for (let i = 0; i < n; i++) {
+      const g = new Guard(this, { gender: i % 2 ? 'female' : 'male', skin: 'dark', hair: i % 2 ? 'buns' : 'buzzed', hairColor: 'black', outfit: 'guard_elite', width: 0.94 }, 47 + i * 1.2, 51, { route: [], name: 'Reinforcement', role: 'elite', vRange: 15 });
+      await g.init(); this.guards.push(g); this.register(g);
+      g.state = 'alert'; g.lastSeen = { x: this.player.x, y: this.player.y, t: this.time }; g.sus = 1;
+    }
+    this.toast('Reinforcements have arrived', 'bad');
   }
 
   // ------------------------------------------------------------------------------------------------ doors
   canOpenDoor(actor, d) {
+    if (d.alarm && actor.kind !== 'guard') return false;         // lockdown: only security has keys
     if (!d.lock) return true;
-    if (d.alarm) return false;
     if (actor.canPass) return actor.canPass(d);
     return false;
   }
@@ -156,6 +191,7 @@ export class Game {
     dt = Math.min(dt, 0.05);
     this.time += dt; this.stats.time += dt;
     this.input.poll(dt);
+    if (this.input.was('m')) this.audio.setMuted(!this.audio.muted);
     if (this.input.intent.pause) { this.paused = true; this.ui && this.ui.showPause && this.ui.showPause(true); this.input.endFrame(); return; }
     const P = this.player;
     for (let i = this.timers.length - 1; i >= 0; i--) { const t = this.timers[i]; t.t -= dt; if (t.t <= 0) { this.timers.splice(i, 1); t.fn(); } }
