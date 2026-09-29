@@ -1,0 +1,22 @@
+<!doctype html><meta charset="utf-8"><title>Model lineup</title>
+<style>html,body{margin:0;background:#15121a;overflow:hidden}</style>
+<script type="importmap">{"imports":{"three":"../vendor/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from '../vendor/GLTFLoader.js';
+const names=['hero','skeleton','archer','brute','shaman','bat','boss','barrel_oil','barrel_water','chest','brazier','exit'];
+const r=new THREE.WebGLRenderer({antialias:true});r.setSize(innerWidth,innerHeight);document.body.appendChild(r.domElement);
+r.shadowMap.enabled=true;
+const s=new THREE.Scene();s.background=new THREE.Color(0x15121a);
+s.add(new THREE.HemisphereLight(0xaab4ff,0x332a40,1.4));
+const d=new THREE.DirectionalLight(0xffe0c0,2.2);d.position.set(3,8,6);s.add(d);
+const cam=new THREE.PerspectiveCamera(30,innerWidth/innerHeight,.1,100);
+const gl=new GLTFLoader();const gap=2.3;
+let loaded=0;
+names.forEach((n,i)=>gl.load(`../assets/models/${n}.glb`,g=>{const o=g.scene;o.position.x=(i-(names.length-1)/2)*gap;s.add(o);
+ window.__models=window.__models||{};window.__models[n]=o;
+ if(++loaded===names.length){window.__ready=true;}}));
+cam.position.set(0,3.4,21);cam.lookAt(0,1.2,0);
+addEventListener('keydown',e=>{if(e.key==='b')s.traverse(o=>{if(o.isObject3D&&o.position)o.rotation.y=Math.PI;})});
+(function loop(){requestAnimationFrame(loop);r.render(s,cam)})();
+</script>
