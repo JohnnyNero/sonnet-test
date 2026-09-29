@@ -11,7 +11,7 @@ export class Player extends Actor {
   constructor(game, spec, x, y, face = 0) {
     super(game, spec, x, y, face);
     this.kind = 'player'; this.faction = 'player';
-    this.disguise = 'none'; this.disguiseCompromised = false;
+    this.disguise = 'none'; this.disguiseBlown = false; this.cover = 1; this.coverT = 99;
     this.inv = { keycard: false, darts: 6, coins: 4, emp: 2, hackTool: true, lockpick: true, goggles: true, loot: 0, lootValue: 0, intel: {} };
     this.gadget = 0; this.nvg = false;
     this.running = false; this.slide = null; this.jump = null; this.carrying = null;
@@ -38,16 +38,33 @@ export class Player extends Actor {
   // -------------------------------------------------------------------------------------------- disguise
   setDisguise(key, silent = false) {
     if (this.disguise === key) return;
-    this.disguise = key; this.disguiseCompromised = false;
+    this.disguise = key; this.disguiseBlown = false; this.cover = 1; this.coverT = 99;
     const outfit = outfitForDisguise(key, this.spec.gender);
     this.char.setOutfit(outfit).then(() => { prepareRimLater(this); });
     this.game.stats.disguises++;
     if (!silent) this.game.toast(key === 'none' ? 'Back in your own gear' : `Disguised: ${DISGUISES[key].label}`, 'good');
   }
 
+  coverHit(amount, why) {
+    if (this.disguise === 'none' || this.disguiseBlown || this.inVent) return;
+    this.cover = Math.max(0, this.cover - amount); this.coverT = 0; this.coverWhy = why;
+    if (this.cover <= 0) {
+      this.disguiseBlown = true; this.game.stats.ghost = false; this.game.stats.blown = (this.game.stats.blown || 0) + 1;
+      this.game.toast(`Cover blown: ${why}. Change clothes or lie low`, 'bad');
+    }
+  }
+  updateCover(dt) {
+    if (this.disguise === 'none') return;
+    this.coverT += dt;
+    if (!this.disguiseBlown) { if (this.cover < 1 && this.coverT > 2.5) this.cover = Math.min(1, this.cover + 0.09 * dt); return; }
+    // lying low (out of sight, no serious alarm) lets people forget the face
+    if (this.coverT > 18 && this.game.alert.level < 2) { this.disguiseBlown = false; this.cover = 0.5; this.game.toast('Nobody is looking for that uniform any more', 'good'); }
+  }
+
   // -------------------------------------------------------------------------------------------- update
   update(dt, I) {
     const g = this.game;
+    this.updateCover(dt);
     this.hurtT = Math.max(0, this.hurtT - dt);
     if (this.state === 'down') { this.syncPose(dt); return; }
     this.updateAction(dt);
@@ -98,7 +115,7 @@ export class Player extends Actor {
     if (this.state === 'down' || this.locked) return;
     if (this.jump || this.slide) return;
     const v = this.speed;
-    if (this.inVent) this.setPose(v > 0.15 ? 'crouchMove' : 'crouchIdle', Math.max(v, 0.4));
+    if (this.inVent) this.setPose(v > 0.15 ? 'crawl' : 'crawlIdle', Math.max(v, 0.4));
     else if (this.carrying) this.setPose(v > 0.15 ? 'carry' : 'idle', Math.max(v, 0.3));
     else if (this.stance === 'crouch') this.setPose(v > 0.15 ? 'crouchMove' : 'crouchIdle', Math.max(v, 0.3));
     else if (v > 3.0) this.setPose('run', v);
@@ -108,7 +125,7 @@ export class Player extends Actor {
 
   // -------------------------------------------------------------------------------------------- noise
   footsteps(dt) {
-    if (this.inVent) { this.footAcc += this.speed * dt; if (this.footAcc > 1.6) { this.footAcc = 0; this.game.noise(this.x, this.y, 1.6, 'vent', this); } return; }
+    if (this.inVent) return;
     if (this.slide || this.jump || this.speed < 0.3) return;
     this.footAcc += this.speed * dt;
     const stride = this.running ? 1.9 : 1.0;

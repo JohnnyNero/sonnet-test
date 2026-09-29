@@ -26,5 +26,5 @@ export const TUNING = {
 // Nominal ground speed (m/s) baked into each Quaternius clip, used to scale playback so feet do not slide.
 export const CLIP_SPEED = {
   Walk_Loop: 0.97, Walk_Formal_Loop: 0.97, Jog_Fwd_Loop: 5.36, Sprint_Loop: 8.25, Crouch_Fwd_Loop: 0.75, Walk_Carry_Loop: 0.65,
-  Zombie_Walk_Fwd_Loop: 1.05, Slide_Loop: 4.5,
+  Zombie_Walk_Fwd_Loop: 1.05, Swim_Fwd_Loop: 1.0, Slide_Loop: 4.5,
 };

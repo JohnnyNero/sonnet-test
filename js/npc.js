@@ -1,7 +1,7 @@
 // Civilians and staff: guests, waiters, chefs, executives. They mingle, and they WITNESS suspicious things.
 import { Actor, angleDiff } from './actor.js';
 import { TUNING } from './config.js';
-import { exposure, disguiseVerdict, suspiciousBehaviour } from './stealth.js';
+import { exposure, judgeDisguise } from './stealth.js';
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 
@@ -28,14 +28,13 @@ export class Npc extends Actor {
     const P = g.player;
     // ---- witness logic
     if (this.fleeT > 0) { this.fleeT -= dt; this.flee(dt); this.integrate(dt); this.animateMove(); return; }
-    if (P.state !== 'down' && !P.hidden) {
+    if (P.state !== 'down' && !P.hidden && !P.inVent) {
       let e = exposure(g, this.obs(), P);
       if (e > 0) {
-        const v = disguiseVerdict(g, this, P), odd = suspiciousBehaviour(P);
-        if (v === 'ok' && !odd) e = 0; else if (v === 'ok') e *= 0.5; else if (v === 'seethrough') e = Math.max(e * 0.6, 0.2);
-        else e *= 0.75;
+        const J = judgeDisguise(g, this.obs(), P, e, dt, { odd: 0.5, see: 0.2, tres: 0.75 });
+        e = J.e;
         // crowds are forgiving for a stranger at range
-        if (this.faction === 'guest' && v === 'naked' && Math.hypot(P.x - this.x, P.y - this.y) > 7) e *= 0.5;
+        if (this.faction === 'guest' && J.v === 'naked' && Math.hypot(P.x - this.x, P.y - this.y) > 7) e *= 0.5;
       }
       if (e > 0.05) { this.sus = clamp(this.sus + e * dt / 1.8, 0, 1.2); this.faceToward(Math.atan2(P.x - this.x, P.y - this.y), dt, 4); }
       else this.sus = Math.max(0, this.sus - dt * 0.15);

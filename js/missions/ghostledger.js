@@ -303,14 +303,20 @@ export async function buildGhostLedger(game, seed) {
   seg(33, 19, 45, 19);                                                  // west of the vault lobby
   seg(45, 19, 45, 3);                                                   // beside the laser hall into the vault
   seg(45, 19, 66, 19); seg(66, 19, 66, 14); seg(66, 14, 72, 14);        // east into the office wing and exec suite
+  seg(66, 19, 66, 42); seg(66, 29, 73, 29); seg(73, 29, 83, 29);      // office corridor south, into security and the server room
+  seg(66, 42, 74, 42);                                                  // openplan
+  seg(72, 14, 72, 5);                                                   // exec suite up to the roof
+  seg(59, 52, 59, 19);                                                  // street wall -> gala -> lounge -> back to the trunk
+  seg(45, 4, 55, 4);                                                    // along the vault ceiling
+  const fl = (id, x, y) => ({ id, x, y, floor: true, exitAt: { x: x + 0.5, y: y + 0.5 } });
   ventPlan.grates = [
     { id: 'A1', x: 20, y: 52, wall: true, exitAt: { x: 20.5, y: 53.6 }, facing: 'S' },
-    { id: 'S1', x: 9, y: 35, floor: true, exitAt: { x: 9.5, y: 35.5 } },
-    { id: 'G1', x: 37, y: 35, floor: true, exitAt: { x: 37.5, y: 35.5 } },
-    { id: 'L1', x: 45, y: 19, floor: true, exitAt: { x: 45.5, y: 19.5 } },
-    { id: 'V1', x: 45, y: 3, floor: true, exitAt: { x: 45.5, y: 3.5 } },
-    { id: 'O1', x: 66, y: 19, floor: true, exitAt: { x: 66.5, y: 19.5 } },
-    { id: 'E1', x: 72, y: 14, floor: true, exitAt: { x: 72.5, y: 14.5 } },
+    { id: 'A2', x: 59, y: 52, wall: true, exitAt: { x: 59.5, y: 53.6 }, facing: 'S' },
+    fl('S1', 9, 35), fl('K2', 14, 44), fl('LK1', 27, 44), fl('SV1', 33, 30),
+    fl('G1', 37, 35), fl('G2', 59, 40), fl('LG1', 59, 24),
+    fl('L1', 46, 19), fl('VL2', 52, 19), fl('V1', 45, 3), fl('V2', 55, 4),
+    fl('O1', 66, 19), fl('OC1', 66, 30), fl('SEC1', 73, 29), fl('SRV1', 83, 29), fl('OP1', 73, 42),
+    fl('E1', 72, 14), fl('R1', 72, 5),
   ];
   game.vent = makeVent(W, H, ventPlan);
   game.ventPlan = ventPlan;
@@ -532,6 +538,5 @@ export async function buildGhostLedger(game, seed) {
   game.failMission = (why) => {
     if (game.mission.ended) return; game.mission.ended = true; game.state = 'result'; game.player.state = 'down'; game.ui.result(false, why);
   };
-  game.disguiseOK = (P, zone) => { const dz = { none: [], guest: ['public'], waiter: ['public', 'staff'], chef: ['public', 'staff'], staff: ['public', 'staff', 'restricted'], guard: ['public', 'staff', 'restricted'], exec: ['public', 'restricted'] }; return (dz[P.disguise] || []).includes(zone); };
   return game.mission;
 }

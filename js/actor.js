@@ -53,6 +53,8 @@ export class Actor {
       case 'run': clip = 'Jog_Fwd_Loop'; ts = speed / CLIP_SPEED.Jog_Fwd_Loop; break;
       case 'crouchIdle': clip = 'Crouch_Idle_Loop'; break;
       case 'crouchMove': clip = 'Crouch_Fwd_Loop'; ts = speed / CLIP_SPEED.Crouch_Fwd_Loop; break;
+      case 'crawl': clip = 'Swim_Fwd_Loop'; ts = speed / CLIP_SPEED.Swim_Fwd_Loop; break;
+      case 'crawlIdle': clip = 'Swim_Idle_Loop'; break;
       case 'carry': clip = 'Walk_Carry_Loop'; ts = speed / CLIP_SPEED.Walk_Carry_Loop; break;
       case 'torch': clip = 'Idle_Torch_Loop'; break;
       case 'phone': clip = 'Idle_TalkingPhone_Loop'; break;

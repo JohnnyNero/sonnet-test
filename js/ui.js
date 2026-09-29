@@ -18,16 +18,18 @@ export class UI {
         <div id="alert">Undetected</div>
         <canvas id="mini" width="190" height="150"></canvas>
         <div id="zone" class="neutral">Outside</div>
-        <div id="disg"></div>
-        <div id="pips"><i></i><i></i><i></i></div>
-        <div id="gem" class="panel"><div class="top"><div id="gemDot"></div><div><div class="lbl" id="gemLbl">HIDDEN</div><div class="sub" id="gemSub">Stealth: standing</div></div></div><div class="row"><span>LIGHT</span><b id="lightPct">0%</b></div><div class="bar"><i id="lightBar"></i></div><div class="row n"><span>NOISE</span></div><div class="bar thin"><i id="noiseBar"></i></div></div>
+        <div id="status">
+          <div id="pips"><i></i><i></i><i></i></div>
+          <div id="disg" class="panel"><div class="dn"><span id="dName">Infiltrator</span><b id="dState">Unknown intruder</b></div><div class="cv"><i id="dCover"></i></div><div class="dh" id="dHint"></div></div>
+          <div id="gem" class="panel"><div class="top"><div id="gemDot"></div><div><div class="lbl" id="gemLbl">HIDDEN</div><div class="sub" id="gemSub">Stealth: standing</div></div></div><div class="row"><span>LIGHT</span><b id="lightPct">0%</b></div><div class="bar"><i id="lightBar"></i></div><div class="row n"><span>NOISE</span></div><div class="bar thin"><i id="noiseBar"></i></div></div>
+        </div>
         <div id="bar"></div>
         <div id="prompt"></div>
         <div id="toasts"></div>
       </div>
       <div id="screen" class="screen"><div class="card"><h2 class="serif">Loading</h2></div></div>`;
     this.hud = $(root, '#hud'); this.screenEl = $(root, '#screen');
-    this.el = { objs: $(root, '#objList'), alert: $(root, '#alert'), mini: $(root, '#mini'), zone: $(root, '#zone'), disg: $(root, '#disg'), pips: $(root, '#pips'), gemDot: $(root, '#gemDot'), gemLbl: $(root, '#gemLbl'), gemSub: $(root, '#gemSub'), noiseBar: $(root, '#noiseBar'), lightBar: $(root, '#lightBar'), lightPct: $(root, '#lightPct'), bar: $(root, '#bar'), prompt: $(root, '#prompt'), toasts: $(root, '#toasts'), marks: $(root, '#marks'), vig: $(root, '#vig') };
+    this.el = { objs: $(root, '#objList'), alert: $(root, '#alert'), mini: $(root, '#mini'), zone: $(root, '#zone'), disg: $(root, '#disg'), dName: $(root, '#dName'), dState: $(root, '#dState'), dCover: $(root, '#dCover'), dHint: $(root, '#dHint'), pips: $(root, '#pips'), gemDot: $(root, '#gemDot'), gemLbl: $(root, '#gemLbl'), gemSub: $(root, '#gemSub'), noiseBar: $(root, '#noiseBar'), lightBar: $(root, '#lightBar'), lightPct: $(root, '#lightPct'), bar: $(root, '#bar'), prompt: $(root, '#prompt'), toasts: $(root, '#toasts'), marks: $(root, '#marks'), vig: $(root, '#vig') };
     this.mctx = this.el.mini.getContext('2d');
     this.marks = new Map(); this.miniT = 0; this.objSig = ''; this.barSig = ''; this.noiseVis = 0; this.lightVis = 0; this.isTouch = false;
   }
@@ -35,7 +37,7 @@ export class UI {
   // ------------------------------------------------------------------------------------------ screens
   loading(t) { if (t === null) { this.screenEl.classList.add('hidden'); return; } this.screenEl.classList.remove('hidden'); this.screenEl.innerHTML = `<div class="card"><h2 class="serif">${t}</h2></div>`; }
   hideScreen() { this.screenEl.classList.add('hidden'); }
-  showHud(v) { this.hud.classList.toggle('hidden', !v); }
+  showHud(v) { this.hud.classList.toggle('hidden', !v); document.body.classList.toggle('inplay', !!v); }
 
   title(onStart) {
     this.showHud(false); this.screenEl.classList.remove('hidden');
@@ -80,7 +82,7 @@ export class UI {
     const rows = game.objectives.map(o => `<li class="${o.optional ? 'opt' : ''}">${o.text}</li>`).join('');
     this.screenEl.innerHTML = `<div class="card"><div style="color:var(--dim);letter-spacing:.4em;font-size:12px">CONTRACT #${c.seed}</div><h2 class="serif" style="margin-top:8px">${c.name}</h2>
       <div class="brief"><div class="panel"><h3>Objectives</h3><ul>${rows}</ul></div>
-      <div class="panel"><h3>Ways in</h3><ul><li><b>Service door</b>: pick the kitchen lock in the alley</li><li><b>Front door</b>: walk in through the gala foyer</li><li><b>Rooftop</b>: fire escape ladder in the alley, then the roof door</li><li><b>Vents</b>: unscrew the alley wall grate</li></ul><h3 style="margin-top:12px">Intel</h3><ul><li>Uniforms in the staff lockers open doors that a thief's clothes cannot</li><li>The vault lasers can be shut down from the server room</li></ul></div></div>
+      <div class="panel"><h3>Ways in</h3><ul><li><b>Service door</b>: pick the kitchen lock in the alley</li><li><b>Front door</b>: walk in through the gala foyer</li><li><b>Rooftop</b>: fire escape ladder in the alley, then the roof door</li><li><b>Vents</b>: 20 grates across the building. Nobody can see or hear you inside</li></ul><h3 style="margin-top:12px">Intel</h3><ul><li>Uniforms in the staff lockers open doors that a thief's clothes cannot</li><li>The vault lasers can be shut down from the server room</li></ul></div></div>
       <button class="btn" id="beginBtn">Begin infiltration</button></div>`;
     $(this.screenEl, '#beginBtn').onclick = () => { this.hideScreen(); this.showHud(true); onBegin && onBegin(); };
   }
@@ -137,19 +139,23 @@ export class UI {
     const zt = g.level.zoneTypeAt(p.x, p.y), ok = p.disguise !== 'none' && g.disguiseOK(p, zt);
     const zname = p.inVent ? 'Ventilation' : ({ outside: 'Outside', public: 'Public area', staff: 'Staff only', restricted: 'Restricted', vault: 'Vault' })[zt];
     this.el.zone.textContent = zname; this.el.zone.className = p.inVent ? 'neutral' : zt === 'outside' ? 'neutral' : (zt === 'public' && p.disguise === 'none') ? 'bad' : ok ? 'ok' : 'bad';
-    this.el.disg.textContent = p.disguise === 'none' ? 'Unknown intruder' : `Disguise: ${DISGUISES[p.disguise].label}`;
-    this.el.disg.style.color = p.disguise === 'none' ? 'var(--dim)' : ok ? 'var(--good)' : 'var(--red)';
+    const D = p.disguise === 'none' ? null : DISGUISES[p.disguise];
+    const dcls = !D ? 'none' : p.disguiseBlown ? 'blown' : ok ? 'ok' : 'bad';
+    if (this.el.disg.dataset.k !== dcls + p.disguise) { this.el.disg.dataset.k = dcls + p.disguise; this.el.disg.className = 'panel ' + dcls; this.el.dName.textContent = D ? D.label : 'Infiltrator'; this.el.dHint.textContent = D ? D.hint : 'Steal a uniform from a downed guard, staff or a locker'; }
+    this.el.dState.textContent = !D ? 'No cover' : p.disguiseBlown ? '✕ Cover blown' : ok ? '✓ Cleared here' : '⚠ Off limits here';
+    this.el.dCover.style.width = D ? ((p.disguiseBlown ? 0 : p.cover) * 100).toFixed(0) + '%' : '0%';
+    this.el.dCover.style.background = p.cover > 0.6 ? 'var(--good)' : p.cover > 0.3 ? 'var(--amber)' : 'var(--red)';
     // pips
     [...this.el.pips.children].forEach((e, i) => e.classList.toggle('off', i >= p.hp));
     this.el.vig.classList.toggle('hurt', p.hurtT > 0);
     // light gem
-    const lum = p.light, expo = Math.min(1, lum / 0.55);
-    const st = lum < 0.07 ? ['HIDDEN', '#6f8cff'] : lum < 0.2 ? ['SHADOWED', '#8aa0c8'] : lum < 0.45 ? ['DIM', '#d8d0a8'] : ['EXPOSED', '#ffd870'];
+    const lum = p.inVent ? 0 : p.light, expo = Math.min(1, lum / 0.55);
+    const st = p.inVent ? ['UNSEEN', '#6fe0ff'] : lum < 0.07 ? ['HIDDEN', '#6f8cff'] : lum < 0.2 ? ['SHADOWED', '#8aa0c8'] : lum < 0.45 ? ['DIM', '#d8d0a8'] : ['EXPOSED', '#ffd870'];
     this.el.gemLbl.textContent = st[0]; this.el.gemLbl.style.color = st[1];
     this.el.gemDot.style.background = `radial-gradient(circle, ${st[1]} ${Math.round(expo * 65)}%, #000 100%)`; this.el.gemDot.style.borderColor = st[1]; this.el.gemDot.style.color = st[1];
     this.lightVis += (expo - this.lightVis) * Math.min(1, dt * 10);
     this.el.lightBar.style.width = (this.lightVis * 100).toFixed(0) + '%'; this.el.lightBar.style.background = st[1]; this.el.lightPct.textContent = (this.lightVis * 100).toFixed(0) + '%';
-    this.el.gemSub.textContent = p.inVent ? 'In the vents' : p.carrying ? 'Carrying a body' : p.slide ? 'Sliding' : p.running ? 'Running: loud' : p.stance === 'crouch' ? 'Crouched: quiet' : p.speed > 0.3 ? 'Walking' : 'Standing still';
+    this.el.gemSub.textContent = p.inVent ? 'In the vents: undetectable' : p.carrying ? 'Carrying a body' : p.slide ? 'Sliding' : p.running ? 'Running: loud' : p.stance === 'crouch' ? 'Crouched: quiet' : p.speed > 0.3 ? 'Walking' : 'Standing still';
     const noise = p.inVent ? 0.08 : p.running ? 1 : p.speed < 0.3 ? 0 : p.stance === 'crouch' ? 0.18 : 0.42;
     this.noiseVis += (noise - this.noiseVis) * Math.min(1, dt * 8); this.el.noiseBar.style.width = (this.noiseVis * 100).toFixed(0) + '%'; this.el.noiseBar.style.background = this.noiseVis > 0.7 ? '#ff7a58' : '#7ab8ff';
     // gadget bar

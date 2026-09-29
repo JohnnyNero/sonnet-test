@@ -44,6 +44,17 @@ export function buildVentVisuals(R, vent) {
     (byName[d.name] = byName[d.name] || []).push(m4.clone());
   }
   for (const n in byName) { const g = Env.instanced(n, byName[n], { fb: { w: 1, d: 1, h: 0.7, color: 0x606870 } }); group.add(g.group); }
+  // translucent ducts: you can see yourself (and the rooms below) through the casing while crawling
+  const ghost = new Map();
+  group.traverse(o => {
+    if (!o.isMesh) return;
+    const conv = m => {
+      if (!ghost.has(m)) { const c = m.clone(); c.transparent = true; c.opacity = 0.3; c.depthWrite = false; if (c.emissive) { c.emissive.setHex(0x14323f); c.emissiveIntensity = 1; } c.userData = { ...m.userData, ventGhost: true }; ghost.set(m, c); }
+      return ghost.get(m);
+    };
+    o.material = Array.isArray(o.material) ? o.material.map(conv) : conv(o.material);
+    o.renderOrder = 6; o.castShadow = false; o.receiveShadow = false;
+  });
   return group;
 }
 

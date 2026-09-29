@@ -42,7 +42,7 @@ export class SecurityCamera {
     else this.face = this.baseFace + Math.sin(g.time * this.speed + this.phase) * this.amp;
     if (this.head) this.head.rotation.y = this.face - this.baseFace;
     const P = g.player;
-    if (P.state !== 'down' && !P.hidden) {
+    if (P.state !== 'down' && !P.hidden && !P.inVent) {
       let e = exposure(g, this.obs(), P);
       if (e > 0 && P.disguise !== 'none' && !P.busy) {
         // cameras only care about disguised players who behave oddly or stray out of bounds

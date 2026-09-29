@@ -1,7 +1,7 @@
 // Security guards: patrols, perception (sight/sound), suspicion, investigation, search, alert, non-lethal downing.
 import { Actor, angleDiff } from './actor.js';
 import { TUNING } from './config.js';
-import { exposure, disguiseVerdict, suspiciousBehaviour } from './stealth.js';
+import { exposure, judgeDisguise } from './stealth.js';
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const HEAR = { step: 1, slide: 1, jump: 1, land: 1, work: 1, vent: 0.7, door: 0.8, coin: 1.15, glass: 1.2, bodyfall: 1, dart: 0.4, alarm: 1.4, bang: 1.0, emp: 1.0, laser: 1.3, zap: 1 };
@@ -55,14 +55,11 @@ export class Guard extends Actor {
   senseVision(dt, P) {
     const g = this.game;
     let e = 0, reason = null;
-    if (P.state !== 'down' && !P.hidden && !g.mission?.ended) {
+    if (P.state !== 'down' && !P.hidden && !P.inVent && !g.mission?.ended) {
       e = exposure(g, this.obs(), P);
       if (e > 0) {
-        const v = disguiseVerdict(g, this, P);
-        const odd = suspiciousBehaviour(P);
-        if (v === 'ok') { if (odd && P.disguise !== 'none') { e *= 0.55; reason = odd; } else e = 0; }
-        else if (v === 'seethrough') { e = Math.max(e * 0.6, 0.28); reason = 'not who they claim'; }
-        else if (v === 'trespass') { e *= 0.8; reason = 'trespassing'; }
+        const J = judgeDisguise(g, this.obs(), P, e, dt);
+        e = J.e; reason = J.reason;
       }
     }
     this.seesPlayer = e > 0.03; this.exposureNow = e;

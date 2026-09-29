@@ -166,8 +166,11 @@ P.enterVent = function (p, grate) {
   p.inVent = true; p.stance = 'crouch'; p.x = c.x + 0.5; p.y = c.y + 0.5; p.vx = p.vy = 0;
   this.R.ventMode = true; if (this.R.ventGroup) this.R.ventGroup.visible = true;
   this.R.cam.tDist = 11; this.R.cam.tPitch = 1.2;
-  this.toast('Crawling through the vents. Guards can barely hear you', 'info');
-  this.noise(p.x, p.y, 2.5, 'vent', p);
+  this.toast('In the vents: nobody can see or hear you', 'info');
+  this.ventGlow(p, true);
+};
+P.ventGlow = function (p, on) {
+  p.group && p.group.traverse(o => { if (o.isMesh && o.material && o.material.emissive && !o.material.userData.noGlow) { const ms = Array.isArray(o.material) ? o.material : [o.material]; for (const m of ms) if (m.emissive) { m.userData._em = m.userData._em ?? m.emissive.getHex(); m.emissive.setHex(on ? 0x2c5266 : m.userData._em); } } });
 };
 P.ventExit = function (p, grate) {
   const c = grate.ventCell; return Math.hypot(p.x - (c.x + 0.5), p.y - (c.y + 0.5)) < 1.15;
@@ -176,5 +179,6 @@ P.exitVent = function (p, grate) {
   p.inVent = false; p.stance = 'crouch'; p.x = grate.exitAt.x; p.y = grate.exitAt.y; p.vx = p.vy = 0;
   this.R.ventMode = false; if (this.R.ventGroup) this.R.ventGroup.visible = false;
   this.R.cam.tDist = 19; this.R.cam.tPitch = 1.08;
+  this.ventGlow(p, false);
   this.noise(p.x, p.y, 3, 'work', p);
 };

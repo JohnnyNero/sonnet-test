@@ -43,7 +43,7 @@ export function sightBlocked(game, ox, oy, tx, ty, tgtStance) {
 // Exposure of a target to an observer, 0..~1.5. >0 means "currently seen" (rate of suspicion gain).
 //   obs: { x, y, face, vRange, vFov (full angle rad), vNear, torchOn, torchRange, torchAngle, kind }
 export function exposure(game, obs, tgt, { ignoreDisguise = false } = {}) {
-  if (tgt.hidden || tgt.state === 'hidden') return 0;
+  if (tgt.hidden || tgt.inVent || tgt.state === 'hidden') return 0;
   const dx = tgt.x - obs.x, dy = tgt.y - obs.y, d = Math.hypot(dx, dy);
   const range = Math.max(obs.vRange, obs.torchOn ? obs.torchRange : 0);
   if (d > range) return 0;
@@ -75,7 +75,7 @@ export function exposure(game, obs, tgt, { ignoreDisguise = false } = {}) {
 export function disguiseVerdict(game, obs, player) {
   const d = player.disguise || 'none';
   const zone = game.level.zoneTypeAt(player.x, player.y);
-  if (d === 'none') return 'naked';
+  if (d === 'none' || player.disguiseBlown) return 'naked';
   if (!disguiseAllows(d, zone)) return 'trespass';
   const dist = Math.hypot(obs.x - player.x, obs.y - player.y);
   if (DISGUISES[d].see.includes(obs.faction) && dist < 3.2) return 'seethrough';
@@ -91,4 +91,28 @@ export function suspiciousBehaviour(player) {
   if (player.running) return 'running';
   if (player.slide) return 'sliding';
   return null;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// How much an observer who currently sees the player (raw exposure `e`) actually reacts, given the disguise.
+// Also wears down the player's COVER: seeing through a uniform, catching it out of bounds, odd behaviour and
+// standing too close all chip at it; at zero the disguise is blown (everyone treats you as an intruder) until you
+// change clothes or stay out of sight for a while.
+//   k: per-observer tuning { odd, see, seeMul, tres }
+export function judgeDisguise(game, obs, P, e, dt, k = {}) {
+  const K = { odd: 0.55, see: 0.28, seeMul: 0.6, tres: 0.8, ...k };
+  const v = disguiseVerdict(game, obs, P), odd = suspiciousBehaviour(P);
+  let reason = null, out = e;
+  const dist = Math.hypot(obs.x - P.x, obs.y - P.y);
+  if (v === 'ok') {
+    if (P.disguise === 'none') return { e, reason, v };
+    if (odd) { out = e * K.odd; reason = odd; P.coverHit(0.35 * e * dt, odd); }
+    else {
+      out = 0;
+      if (dist < 2.2) P.coverHit(0.05 * dt, 'too close');                    // nervous: staring at someone up close
+      if (P.cover < 0.5) { out = e * 0.4 * (1 - P.cover / 0.5); reason = 'looks off'; }   // a fraying cover invites a second look
+    }
+  } else if (v === 'seethrough') { out = Math.max(e * K.seeMul, K.see); reason = 'not who they claim'; P.coverHit(0.32 * dt, 'they know the uniform'); }
+  else if (v === 'trespass') { out = e * K.tres; reason = 'trespassing'; P.coverHit(0.9 * e * dt, 'wrong place for that uniform'); }
+  return { e: out, reason, v };
 }
