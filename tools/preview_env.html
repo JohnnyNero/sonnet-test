@@ -1,0 +1,98 @@
+<!doctype html><meta charset="utf-8"><title>Env kit preview</title>
+<style>
+html,body{margin:0;background:#0b0b10;overflow:hidden;font:11px/1.2 monospace;color:#cfd3e6}
+.lb{position:absolute;transform:translate(-50%,0);white-space:nowrap;pointer-events:none;text-shadow:0 0 3px #000,0 0 3px #000;padding:1px 3px;background:rgba(0,0,0,.35)}
+.lb.p1{color:#9fb}
+#hud{position:absolute;left:6px;top:4px;color:#8a8fa8;pointer-events:none}
+</style>
+<script type="importmap">{"imports":{"three":"../vendor/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from '../vendor/GLTFLoader.js';
+// ?only=a,b  ?cat=structure|gala|office|kitchen|tech|light|exterior  ?cam=close  ?env=0  ?labels=0  ?cols=<row width m>  ?prio=P0  ?zoom=0.4 (multiplies camera distance)
+const Q = new URLSearchParams(location.search);
+const only = Q.get('only') ? Q.get('only').split(',') : null;
+const cat = Q.get('cat'); const prio = Q.get('prio');
+const close = Q.get('cam') === 'close';
+const rowW = +(Q.get('cols') || (close ? 12 : 22));
+window.__errors = [];
+addEventListener('error', e => window.__errors.push(String(e.message)));
+const r = new THREE.WebGLRenderer({ antialias: true });
+r.setSize(innerWidth, innerHeight); r.setPixelRatio(1);
+r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.0;
+r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(r.domElement);
+const hud = document.createElement('div'); hud.id = 'hud'; document.body.appendChild(hud);
+const s = new THREE.Scene(); s.background = new THREE.Color(0x0b0b10);
+s.add(new THREE.HemisphereLight(0xb8c4ff, 0x40364a, 1.6));
+const d = new THREE.DirectionalLight(0xfff0dc, 2.6); d.position.set(-10, 30, 22); d.castShadow = true;
+d.shadow.mapSize.set(2048, 2048); s.add(d); s.add(d.target);
+// small procedural environment so metals are not pitch black (preview only)
+if (Q.get('env') !== '0') {
+  const es = new THREE.Scene(); es.background = new THREE.Color(0x303446);
+  const mk = (c, i, w, h, x, y, z) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(c).multiplyScalar(i), side: THREE.DoubleSide })); m.position.set(x, y, z); m.lookAt(0, 0, 0); es.add(m); };
+  mk(0xffffff, 8, 10, 4, 0, 10, 0); mk(0xffd9a0, 5, 6, 6, 10, 3, 4); mk(0xa0c0ff, 4, 6, 6, -10, 3, -4); mk(0xffffff, 2, 8, 3, 0, 2, 10);
+  const pm = new THREE.PMREMGenerator(r); s.environment = pm.fromScene(es, 0.04).texture; s.environmentIntensity = 0.7;
+}
+const man = await (await fetch('../assets/env/manifest.json')).json();
+let list = man.filter(e => (!only || only.includes(e.name)) && (!cat || e.category === cat) && (!prio || e.priority === prio));
+const gnd = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ color: 0x14141a, roughness: 1 }));
+gnd.rotation.x = -Math.PI / 2; gnd.position.y = Math.min(-0.11, Math.min(...list.map(e => e.zmin)) - 0.01); gnd.receiveShadow = true; s.add(gnd);
+const grid = new THREE.GridHelper(200, 200, 0x303040, 0x1c1c26); grid.position.y = gnd.position.y + 0.005; s.add(grid);
+const cam = new THREE.PerspectiveCamera(30, innerWidth / innerHeight, 0.1, 500);
+const labels = [];
+const gl = new GLTFLoader();
+if (only) list.sort((a, b) => only.indexOf(a.name) - only.indexOf(b.name));
+// layout: flow rows
+let x = 0, z = 0, rowD = 0, maxX = 0; const place = [];
+for (const e of list) {
+  const w = Math.max(e.footprint[0], 1) + (close ? 0.5 : 0.7), dd = Math.max(e.footprint[1], 1) + 0.6 + (e.zmax > 1.6 ? e.zmax * 0.5 : 0);
+  if (x + w > rowW && x > 0) { z += rowD + 1.6; x = 0; rowD = 0; }
+  place.push({ e, x: x + w / 2, z }); x += w; rowD = Math.max(rowD, dd); maxX = Math.max(maxX, x);
+}
+const totalZ = z + rowD;
+const cx = maxX / 2, cz = totalZ / 2;
+let loaded = 0; window.__models = {}; window.__errs = [];
+await Promise.all(place.map(p => new Promise(res => gl.load(`../assets/env/${p.e.name}.glb`, g => {
+  const o = g.scene; o.position.set(p.x - cx, 0, p.z - cz + (p.e.footprint[1] > 1.5 ? 0 : 0));
+  if (p.e.mounts === 'wall') {                   // dark backing wall so wall props read in context
+    const b = new THREE.Mesh(new THREE.BoxGeometry(Math.max(p.e.footprint[0], 1) + 0.2, 2.6, 0.06), new THREE.MeshStandardMaterial({ color: 0x2a2b33, roughness: 1 }));
+    b.position.set(o.position.x, 1.3, o.position.z + 0.03); b.receiveShadow = true; s.add(b);
+  }
+  o.traverse(c => { if (c.isMesh) { c.castShadow = c.receiveShadow = !(c.material && c.material.transparent); } });
+  s.add(o); window.__models[p.e.name] = o;
+  const el = document.createElement('div'); el.className = 'lb ' + p.e.priority.toLowerCase(); el.textContent = p.e.name; if (Q.get('labels') !== '0') document.body.appendChild(el);
+  labels.push({ el, pos: new THREE.Vector3(o.position.x, -0.05, o.position.z + Math.max(p.e.footprint[1], 1) / 2 + 0.5) });
+  res();
+}, undefined, err => { window.__errs.push(p.e.name + ': ' + (err.message || err)); res(); }))));
+// camera fit
+const spanX = Math.max(maxX, 2), spanZ = Math.max(totalZ, 1.5);
+const tallest = Math.max(0.2, ...list.map(e => e.zmax));
+const dir = close ? new THREE.Vector3(0, 0.75, 1) : new THREE.Vector3(0, 1, 0.62);
+dir.normalize();
+const fov = cam.fov * Math.PI / 180, aspect = innerWidth / innerHeight;
+const distX = (spanX / 2 + 1) / (Math.tan(fov / 2) * aspect);
+const distZ = (spanZ / 2 + 0.8 + tallest * 0.5) / (Math.tan(fov / 2) * Math.max(dir.y, 0.5) * 1.0);
+const dist = Math.max(distX, distZ, tallest < 1.05 ? 1.4 : 3.5) * (close ? 0.5 : 1.0) * (+Q.get('zoom') || 1);
+const tgt = new THREE.Vector3(0, close ? Math.min(0.8, tallest * 0.45) : 0.3, 0);
+cam.position.copy(tgt).addScaledVector(dir, dist); cam.lookAt(tgt);
+d.position.set(-8, 30, 20); d.target.position.set(0, 0, 0);
+d.shadow.camera.left = -spanX; d.shadow.camera.right = spanX; d.shadow.camera.top = spanZ; d.shadow.camera.bottom = -spanZ; d.shadow.camera.far = 120; d.shadow.camera.updateProjectionMatrix();
+// ?pose=model.part:rxDeg,ryDeg,rzDeg;...   ?move=model.part:dx,dy,dz;...   (glTF axes, y up; front of models is +Z)
+for (const [key, fn] of [['pose', (o, v) => o.rotation.set(...v.map(a => a * Math.PI / 180))], ['move', (o, v) => o.position.add(new THREE.Vector3(...v))]]) {
+  for (const item of (Q.get(key) || '').split(';').filter(Boolean)) {
+    const [path, vals] = item.split(':'); const [mn, pn] = path.split('.');
+    const m = window.__models[mn]; const part = m && m.getObjectByName(pn);
+    if (part) fn(part, vals.split(',').map(Number)); else window.__errs.push('no part ' + path);
+  }
+}
+hud.textContent = `${list.length} models  ${location.search}`;
+function frame() {
+  r.render(s, cam);
+  for (const l of labels) { const v = l.pos.clone().project(cam); l.el.style.left = ((v.x * .5 + .5) * innerWidth) + 'px'; l.el.style.top = ((-v.y * .5 + .5) * innerHeight) + 'px'; }
+}
+window.__animate = t => { s.traverse(o => { }); };
+(function loop() { requestAnimationFrame(loop); frame(); })();
+window.__scene = s; window.__THREE = THREE; window.__cam = cam;
+window.__ready = true;
+</script>

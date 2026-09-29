@@ -1,9 +1,9 @@
 <!doctype html><meta charset="utf-8"><title>Model lineup</title>
 <style>html,body{margin:0;background:#15121a;overflow:hidden}</style>
-<script type="importmap">{"imports":{"three":"../vendor/three.module.js"}}</script>
+<script type="importmap">{"imports":{"three":"../../../vendor/three.module.js"}}</script>
 <script type="module">
 import * as THREE from 'three';
-import { GLTFLoader } from '../vendor/GLTFLoader.js';
+import { GLTFLoader } from '../../../vendor/GLTFLoader.js';
 const names=['hero','skeleton','archer','brute','shaman','bat','boss','barrel_oil','barrel_water','chest','brazier','exit'];
 const r=new THREE.WebGLRenderer({antialias:true});r.setSize(innerWidth,innerHeight);document.body.appendChild(r.domElement);
 r.shadowMap.enabled=true;

@@ -3,58 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#08060c">
-<title>Cinder Crypt</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='13' font-size='14'%3E%F0%9F%94%A5%3C/text%3E%3C/svg%3E">
-<link rel="stylesheet" href="css/style.css">
+<meta name="theme-color" content="#050508">
+<title>Ghost Ledger</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%23c9a23a'/%3E%3Ccircle cx='8' cy='8' r='3' fill='%23050508'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/game.css">
 <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
 </head>
 <body>
 <canvas id="c"></canvas>
-
-<div id="hud" class="hidden">
-  <div id="floorLabel"></div>
-  <div id="targetBar" class="hidden"><div class="tname"></div><div class="tbar"><i></i></div><div class="tchips"></div></div>
-  <div id="bossBar" class="hidden"><div class="bname">The Grave King</div><div class="bbar"><i></i></div></div>
-  <canvas id="mini" width="150" height="150"></canvas>
-  <div id="toasts"></div>
-  <div id="orb"><div id="orbFill"></div><span id="orbText"></span></div>
-  <div id="skills">
-    <div class="skill" data-k="q"><div class="ico fire"></div><div class="cd"></div><b>1</b><span>Firebolt</span></div>
-    <div class="skill" data-k="w"><div class="ico frost"></div><div class="cd"></div><b>2</b><span>Frost Nova</span></div>
-    <div class="skill" data-k="e"><div class="ico shock"></div><div class="cd"></div><b>3</b><span>Chain Lightning</span></div>
-    <div class="skill" data-k="r"><div class="ico oil"></div><div class="cd"></div><b>4</b><span>Oil Flask</span></div>
-  </div>
-  <div id="codex">
-    <h4>Reactions <em>(H)</em></h4>
-    <p><i class="c-fire"></i> Fire + <i class="c-oil"></i> Oil &rarr; inferno that spreads</p>
-    <p><i class="c-shock"></i> Shock + <i class="c-water"></i> Water &rarr; arcs through the puddle</p>
-    <p><i class="c-frost"></i> Frost + <i class="c-water"></i> Water &rarr; slippery ice</p>
-    <p><i class="c-fire"></i> Fire + <i class="c-ice"></i> Ice &rarr; melts &nbsp; <i class="c-frost"></i> Frost + <i class="c-fire"></i> Fire &rarr; steam</p>
-    <p>Wet + Shock &rarr; x2 &nbsp; Wet + Frost &rarr; frozen &nbsp; Frozen + hit &rarr; shatter</p>
-  </div>
-  <div id="floaters"></div>
-</div>
-
-<div id="inv" class="hidden">
-  <div class="invhead"><h3>Equipment</h3><span class="hint">tap to equip &middot; &#10005; to discard &middot; I to close</span><button id="invClose" class="xbtn">&#10005;</button></div>
-  <div class="invbody">
-    <div class="slots" id="slots"></div>
-    <div class="stats" id="statlist"></div>
-  </div>
-  <h3>Backpack</h3>
-  <div class="bag" id="bag"></div>
-</div>
-<div id="tip" class="hidden"></div>
-
-<div id="rotate">Rotate your device to landscape for the best view</div>
-<div id="overlay">
-  <div class="card" id="ovCard">
-    <div id="loadText">Loading the crypt…</div>
-  </div>
-</div>
+<div id="ui"></div>
 <script type="module" src="js/main.js"></script>
 </body>
 </html>

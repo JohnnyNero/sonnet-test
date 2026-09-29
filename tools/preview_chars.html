@@ -1,0 +1,36 @@
+<!doctype html><meta charset="utf-8"><title>Character lineup</title>
+<style>html,body{margin:0;background:#101015;overflow:hidden;font:12px system-ui;color:#ccd}#l{position:fixed;left:8px;top:6px}</style>
+<div id="l"></div>
+<script type="importmap">{"imports":{"three":"../vendor/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { initCharacters, createCharacter, setBaseURL, clips } from '../js/characters.js';
+setBaseURL('../assets/');
+const q = new URLSearchParams(location.search);
+const r=new THREE.WebGLRenderer({antialias:true});r.setSize(innerWidth,innerHeight);document.body.appendChild(r.domElement);
+r.shadowMap.enabled=true; r.toneMapping=THREE.ACESFilmicToneMapping;
+const s=new THREE.Scene();s.background=new THREE.Color(0x14141a);
+s.add(new THREE.HemisphereLight(0xb8c0ff,0x3a3040,2.4));
+const d=new THREE.DirectionalLight(0xffe8d0,2.6);d.position.set(3,8,6);d.castShadow=true;s.add(d);
+const g=new THREE.Mesh(new THREE.PlaneGeometry(60,20),new THREE.MeshStandardMaterial({color:0x22222a}));g.rotation.x=-Math.PI/2;g.receiveShadow=true;s.add(g);
+const cam=new THREE.PerspectiveCamera(30,innerWidth/innerHeight,.1,100);
+const anim=q.get('anim')||'Walk_Loop';
+await initCharacters();
+window.__clipNames=Object.keys(clips);
+const male=['thief','guard','guard_elite','tuxedo','waiter','exec_suit','staff','chef'];
+const female=['thief','guard','guard_elite','dress','dress_green','waiter','exec_suit','staff','chef'];
+const hairsM=['buzzed','simpleparted','beard'], hairsF=['long','buns','buzzedfemale'];
+const list=[]; const only=q.get('only');
+male.forEach((o,i)=>list.push({gender:'male',skin:i%3===2?'dark':'light',hair:hairsM[i%3],outfit:o,row:0,i}));
+female.forEach((o,i)=>list.push({gender:'female',skin:i%3===1?'dark':'light',hair:hairsF[i%3],outfit:o,row:1,i}));
+const chars=[];
+for (const c of list){ if(only && !only.split(',').includes(c.gender+':'+c.outfit)) continue;
+  const ch=await createCharacter({gender:c.gender,skin:c.skin,hair:c.hair,hairColor:['brown','black','auburn','blonde','grey'][c.i%5],outfit:c.outfit});
+  const n=chars.length; const per=+(q.get('per')||9); ch.group.position.set((n%per-(per-1)/2)*(+(q.get('gap')||1.1)), 0, Math.floor(n/per)*-1.6+ (q.get('rows')?0:0)); s.add(ch.group);
+  ch.play(anim); ch.mixer.update(c.i*0.11); chars.push(ch);}
+const view=q.get('view')||'wide';
+if(view==='close'){cam.position.set(0,1.5,+(q.get('dist')||5));cam.lookAt(0,1.0,0);} else if(view==='top'){cam.position.set(0,16,7);cam.lookAt(0,0.4,0);} else {cam.position.set(0,2.4,12);cam.lookAt(0,0.95,0);}
+window.__ready=true; window.__chars=chars; window.__anim=(n)=>chars.forEach(c=>c.play(n));
+let last=performance.now();
+(function loop(now){requestAnimationFrame(loop);const dt=Math.min(.05,(now-last)/1000);last=now;if(!window.__freeze)chars.forEach(c=>c.update(dt));r.render(s,cam)})(last);
+</script>

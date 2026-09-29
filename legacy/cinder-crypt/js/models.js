@@ -1,6 +1,6 @@
 // Loads the Blender-exported .glb cast and rigs them for procedural animation.
 import * as THREE from 'three';
-import { GLTFLoader } from '../vendor/GLTFLoader.js';
+import { GLTFLoader } from '../../../vendor/GLTFLoader.js';
 
 const NAMES = ['hero', 'skeleton', 'archer', 'brute', 'shaman', 'bat', 'boss',
   'barrel_oil', 'barrel_water', 'chest', 'brazier', 'exit'];

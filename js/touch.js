@@ -1,70 +1,81 @@
-// Mobile controls: floating joystick, skill buttons with aim-assist, hold-to-attack, inventory button.
-export const isTouchDevice = () =>
-  (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+// Touch controls for phones/tablets.
+import { GADGETS } from './player.js';
+export const isTouchDevice = () => (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+const NAMES = { dart: 'DART', coin: 'COIN', emp: 'EMP' };
 
-export function setupTouch(game, ui, { initAudio }) {
-  document.body.classList.add('touch');
-  game.touch = { active: true, mx: 0, my: 0, attack: false };
-  const root = document.createElement('div');
-  root.id = 'touchUI';
-  root.innerHTML = `
-    <div id="joyZone"></div>
-    <div id="joyBase"><div id="joyKnob"></div></div>
-    <div id="tSkills">
-      <div class="tbtn" data-k="q"><i class="ico fire"></i><div class="cd"></div><span>1</span></div>
-      <div class="tbtn" data-k="w"><i class="ico frost"></i><div class="cd"></div><span>2</span></div>
-      <div class="tbtn" data-k="e"><i class="ico shock"></i><div class="cd"></div><span>3</span></div>
-      <div class="tbtn" data-k="r"><i class="ico oil"></i><div class="cd"></div><span>4</span></div>
-      <div class="tbtn atk" id="tAtk"><b>ATTACK</b></div>
-    </div>
-    <div id="tMenu"><button id="tInv">Bag</button><button id="tHelp">?</button></div>`;
-  document.body.appendChild(root);
-
-  const $ = s => root.querySelector(s);
-  const zone = $('#joyZone'), base = $('#joyBase'), knob = $('#joyKnob');
-  const R = 56;
-  let joyId = null, ox = 0, oy = 0;
-
-  const setJoy = (dx, dy) => {
-    const l = Math.hypot(dx, dy), k = l > R ? R / l : 1;
-    knob.style.transform = `translate(${dx * k}px,${dy * k}px)`;
-    const mag = Math.min(1, l / R);
-    if (mag < 0.18) { game.touch.mx = game.touch.my = 0; }
-    else { game.touch.mx = dx / (l || 1) * Math.min(1, (mag - 0.1) / 0.6); game.touch.my = dy / (l || 1) * Math.min(1, (mag - 0.1) / 0.6); }
+export function setupTouch(game, ui) {
+  document.body.classList.add('touch'); ui.isTouch = true;
+  const T = { mx: 0, my: 0, run: false, actionHeld: false, _crouch: false, _action: false, _fire: false, _cycle: 0, _gog: false };
+  T.consumeCrouch = () => { const v = T._crouch; T._crouch = false; return v; };
+  T.consumeAction = () => { const v = T._action; T._action = false; return v; };
+  T.consumeFire = () => { const v = T._fire; T._fire = false; return v; };
+  T.consumeCycle = () => { const v = T._cycle; T._cycle = 0; return v; };
+  T.consumeGoggles = () => { const v = T._gog; T._gog = false; return v; };
+  // aim assist: nearest visible person within a forward arc, else a spot ahead
+  T.aimTarget = () => {
+    const P = game.player; let best = null, bs = -1e9;
+    for (const a of game.actors) {
+      if (a === P || a.state === 'down' || !a.group || !a.group.visible) continue;
+      const dx = a.x - P.x, dy = a.y - P.y, d = Math.hypot(dx, dy); if (d > 13 || d < 0.5) continue;
+      const facing = (dx * Math.sin(P.face) + dy * Math.cos(P.face)) / d; if (facing < 0.35) continue;
+      if (game.level.ray(P.x, P.y, a.x, a.y).hit) continue;
+      const s = facing * 5 - d; if (s > bs) { bs = s; best = a; }
+    }
+    const g = GADGETS[P.gadget];
+    if (best && g === 'dart') return { x: best.x, y: best.y };
+    const d = g === 'dart' ? 10 : 7; return { x: P.x + Math.sin(P.face) * d, y: P.y + Math.cos(P.face) * d };
   };
-  zone.addEventListener('pointerdown', ev => {
-    if (joyId !== null) return;
-    ev.preventDefault(); initAudio();
-    joyId = ev.pointerId; zone.setPointerCapture(joyId);
-    ox = ev.clientX; oy = ev.clientY;
-    base.style.left = ox + 'px'; base.style.top = oy + 'px'; base.classList.add('on'); setJoy(0, 0);
+  game.input.touch = T;
+
+  const root = document.createElement('div'); root.id = 'touch';
+  root.innerHTML = `<div id="joyZone"></div><div id="joyBase"><div id="joyKnob"></div></div>
+    <div class="tb" id="tAct">ACTION</div><div class="tb" id="tCrouch"><span class="ic">▼</span>Crouch</div><div class="tb" id="tRun"><span class="ic">»</span>Run</div>
+    <div class="tb" id="tFire"><span class="ic">✦</span>Fire</div><div class="tb" id="tGad">DART</div><div class="tb" id="tGog">NVG</div>
+    <div class="tb" id="tRotL">⟲</div><div class="tb" id="tRotR">⟳</div><div class="tb" id="tPause">II</div>`;
+  document.body.appendChild(root);
+  const $ = s => root.querySelector(s);
+  const zone = $('#joyZone'), base = $('#joyBase'), knob = $('#joyKnob'), R = 58;
+  let joy = null, ox = 0, oy = 0;
+  const setJoy = (dx, dy) => {
+    const l = Math.hypot(dx, dy), k = l > R ? R / l : 1; knob.style.transform = `translate(${dx * k}px,${dy * k}px)`;
+    const m = Math.min(1, l / R);
+    if (m < 0.16) { T.mx = T.my = 0; } else { const s = Math.min(1, (m - 0.08) / 0.55); T.mx = dx / (l || 1) * s; T.my = dy / (l || 1) * s; }
+  };
+  zone.addEventListener('pointerdown', e => { if (joy !== null) return; e.preventDefault(); game.audioUnlock && game.audioUnlock(); joy = e.pointerId; zone.setPointerCapture(joy); ox = e.clientX; oy = e.clientY; base.style.left = ox + 'px'; base.style.top = oy + 'px'; base.classList.add('on'); setJoy(0, 0); });
+  zone.addEventListener('pointermove', e => { if (e.pointerId === joy) { e.preventDefault(); setJoy(e.clientX - ox, e.clientY - oy); } });
+  const end = e => { if (e.pointerId !== joy) return; joy = null; base.classList.remove('on'); T.mx = T.my = 0; };
+  zone.addEventListener('pointerup', end); zone.addEventListener('pointercancel', end);
+
+  const btn = (id, down, up) => { const el = $(id); el.addEventListener('pointerdown', e => { e.preventDefault(); game.audioUnlock && game.audioUnlock(); el.setPointerCapture(e.pointerId); el.classList.add('press'); down && down(); }); const u = () => { el.classList.remove('press'); up && up(); }; el.addEventListener('pointerup', u); el.addEventListener('pointercancel', u); };
+  btn('#tAct', () => { T._action = true; T.actionHeld = true; }, () => { T.actionHeld = false; });
+  btn('#tCrouch', () => { T._crouch = true; });
+  btn('#tRun', () => { T.run = !T.run; $('#tRun').style.borderColor = T.run ? '#e7c66a' : ''; });
+  btn('#tFire', () => { T._fire = true; });
+  btn('#tGad', () => { T._cycle = 1; });
+  btn('#tGog', () => { T._gog = true; });
+  btn('#tPause', () => { game.input.pressed.add('escape'); });
+  let rotL = 0, rotR = 0;
+  btn('#tRotL', () => { rotL = 1; }, () => { rotL = 0; }); btn('#tRotR', () => { rotR = 1; }, () => { rotR = 0; });
+
+  // two-finger twist + pinch on the canvas
+  const pts = new Map(); let lastAng = null, lastDist = null;
+  const cv = game.canvas;
+  cv.addEventListener('pointerdown', e => { pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); lastAng = lastDist = null; });
+  cv.addEventListener('pointermove', e => {
+    if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.size === 2) { const [a, b] = [...pts.values()], ang = Math.atan2(b.y - a.y, b.x - a.x), dist = Math.hypot(b.x - a.x, b.y - a.y); if (lastAng !== null) { let d = ang - lastAng; if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI; game.R.rotateCamera(-d); game.R.zoomCamera(-(dist - lastDist) * 0.004); } lastAng = ang; lastDist = dist; }
   });
-  zone.addEventListener('pointermove', ev => { if (ev.pointerId === joyId) { ev.preventDefault(); setJoy(ev.clientX - ox, ev.clientY - oy); } });
-  const endJoy = ev => { if (ev.pointerId !== joyId) return; joyId = null; base.classList.remove('on'); game.touch.mx = game.touch.my = 0; };
-  zone.addEventListener('pointerup', endJoy); zone.addEventListener('pointercancel', endJoy);
+  const up = e => { pts.delete(e.pointerId); lastAng = lastDist = null; };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
 
-  root.querySelectorAll('.tbtn[data-k]').forEach(b => {
-    b.addEventListener('pointerdown', ev => { ev.preventDefault(); initAudio(); b.classList.add('press'); game.useSkill(b.dataset.k); });
-    const up = () => b.classList.remove('press');
-    b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('pointerleave', up);
-  });
-  const atk = $('#tAtk');
-  atk.addEventListener('pointerdown', ev => { ev.preventDefault(); initAudio(); atk.setPointerCapture(ev.pointerId); game.touch.attack = true; atk.classList.add('press'); });
-  const atkUp = () => { game.touch.attack = false; atk.classList.remove('press'); };
-  atk.addEventListener('pointerup', atkUp); atk.addEventListener('pointercancel', atkUp);
-
-  $('#tInv').addEventListener('click', () => { ui.toggleInv(game); game.paused = ui.invOpen; });
-  $('#tHelp').addEventListener('click', () => document.getElementById('codex').classList.toggle('show'));
-
-  // cooldown overlays
-  const btns = [...root.querySelectorAll('.tbtn[data-k]')];
   return {
-    update() {
-      for (const b of btns) {
-        const k = b.dataset.k, cdMax = game.skillCd(k), cd = game.hero.cd[k];
-        b.querySelector('.cd').style.height = (cd > 0 ? Math.min(100, cd / cdMax * 100) : 0) + '%';
-      }
-      root.classList.toggle('hidden', game.state === 'title');
+    update(dt) {
+      const P = game.player; if (!P) return;
+      if (rotL) game.R.rotateCamera(1.8 * dt); if (rotR) game.R.rotateCamera(-1.8 * dt);
+      const pr = P.prompt; const a = $('#tAct'); a.textContent = pr && !pr.busy ? (pr.label.length > 18 ? pr.label.slice(0, 17) + '…' : pr.label) : pr && pr.busy ? 'Working…' : 'ACTION';
+      a.style.opacity = pr ? 1 : 0.6;
+      $('#tGad').textContent = NAMES[GADGETS[P.gadget]];
+      root.style.display = game.state === 'play' && !game.paused ? '' : 'none';
     },
   };
 }
