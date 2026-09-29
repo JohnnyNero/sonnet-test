@@ -244,8 +244,62 @@ def _descendants(o):
     return out
 
 
+def resolve_zfight(eps=0.0015):
+    """Coplanar, overlapping, same-facing axis-aligned faces from different boxes z-fight (flicker as the camera moves).
+    The larger/earlier box of each such pair gets its face pushed inward by `eps` so the detail box always wins."""
+    recs = {}
+    order = {o: i for i, o in enumerate(_made)}
+    for o in _made:
+        if o.type != "MESH":
+            continue
+        M = o.matrix_world
+        R = M.to_3x3()
+        vs = [M @ v.co for v in o.data.vertices]
+        xs = [v.x for v in vs]; ys = [v.y for v in vs]; zs = [v.z for v in vs]
+        vol = max(1e-9, (max(xs) - min(xs)) * (max(ys) - min(ys)) * (max(zs) - min(zs)))
+        for pi, poly in enumerate(o.data.polygons):
+            n = R @ poly.normal
+            for a in range(3):
+                if abs(abs(n[a]) - 1.0) < 1e-4:
+                    sg = 1 if n[a] > 0 else -1
+                    pts = [vs[i] for i in poly.vertices]
+                    c = sum(q[a] for q in pts) / len(pts)
+                    b1, b2 = [k for k in range(3) if k != a]
+                    rect = (min(q[b1] for q in pts), max(q[b1] for q in pts), min(q[b2] for q in pts), max(q[b2] for q in pts))
+                    recs.setdefault((a, sg, round(c / 1e-4)), []).append((o, pi, rect, vol, c))
+    moved = set()
+    fixes = 0
+    for (a, sg, kc), lst in list(recs.items()):
+        pool = list(lst) + list(recs.get((a, sg, kc + 1), [])) + list(recs.get((a, sg, kc - 1), []))
+        for i, A in enumerate(lst):
+            for B in pool:
+                if A[0] is B[0] or abs(A[4] - B[4]) > 3e-5:
+                    continue
+                if min(A[2][1], B[2][1]) - max(A[2][0], B[2][0]) < 1e-4 or min(A[2][3], B[2][3]) - max(A[2][2], B[2][2]) < 1e-4:
+                    continue
+                # loser: bigger box; on a tie the earlier one
+                if A[3] > B[3] * 1.0001 or (abs(A[3] - B[3]) <= B[3] * 1e-4 and order[A[0]] < order[B[0]]):
+                    loser = A
+                else:
+                    continue
+                key = (loser[0], loser[1])
+                if key in moved:
+                    continue
+                moved.add(key)
+                o = loser[0]
+                d = Vector((0, 0, 0)); d[a] = -sg * eps
+                ld = o.matrix_world.to_3x3().inverted() @ d
+                for vi in o.data.polygons[loser[1]].vertices:
+                    o.data.vertices[vi].co += ld
+                fixes += 1
+    if fixes:
+        print("    z-fight: pushed %d faces" % fixes)
+
+
 def export(spec):
     name = spec["name"]
+    bpy.context.view_layer.update()
+    resolve_zfight()
     bpy.context.view_layer.update()
     bpy.ops.object.select_all(action="DESELECT")
     for o in _made:

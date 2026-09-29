@@ -2334,7 +2334,7 @@
   "name": "neon_sign_blue",
   "footprint": [
    2.0,
-   0.064
+   0.065
   ],
   "height": 0.5,
   "zmin": 0.0,

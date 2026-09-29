@@ -133,8 +133,6 @@ export class Player extends Actor {
       this.footAcc = 0;
       const L = this.game.level, i = L.idx(Math.floor(this.x), Math.floor(this.y));
       const surf = FLOOR_NOISE[L.floorStyles[L.floor[i]]] || 1;
-      const base = this.running ? 7.5 : this.carrying ? 3.6 : this.stance === 'crouch' ? 1.1 : 3.4;
-      this.game.noise(this.x, this.y, base * surf, 'step', this);
       this.game.audio && this.game.audio.step && this.game.audio.step(surf, this.running);
     }
   }

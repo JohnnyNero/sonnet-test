@@ -21,7 +21,7 @@ export class UI {
         <div id="status">
           <div id="pips"><i></i><i></i><i></i></div>
           <div id="disg" class="panel"><div class="dn"><span id="dName">Infiltrator</span><b id="dState">Unknown intruder</b></div><div class="cv"><i id="dCover"></i></div><div class="dh" id="dHint"></div></div>
-          <div id="gem" class="panel"><div class="top"><div id="gemDot"></div><div><div class="lbl" id="gemLbl">HIDDEN</div><div class="sub" id="gemSub">Stealth: standing</div></div></div><div class="row"><span>LIGHT</span><b id="lightPct">0%</b></div><div class="bar"><i id="lightBar"></i></div><div class="row n"><span>NOISE</span></div><div class="bar thin"><i id="noiseBar"></i></div></div>
+          <div id="gem" class="panel"><div class="top"><div id="gemDot"></div><div><div class="lbl" id="gemLbl">HIDDEN</div><div class="sub" id="gemSub">Stealth: standing</div></div></div><div class="row"><span>LIGHT</span><b id="lightPct">0%</b></div><div class="bar"><i id="lightBar"></i></div></div>
         </div>
         <div id="bar"></div>
         <div id="prompt"></div>
@@ -29,7 +29,7 @@ export class UI {
       </div>
       <div id="screen" class="screen"><div class="card"><h2 class="serif">Loading</h2></div></div>`;
     this.hud = $(root, '#hud'); this.screenEl = $(root, '#screen');
-    this.el = { objs: $(root, '#objList'), alert: $(root, '#alert'), mini: $(root, '#mini'), zone: $(root, '#zone'), disg: $(root, '#disg'), dName: $(root, '#dName'), dState: $(root, '#dState'), dCover: $(root, '#dCover'), dHint: $(root, '#dHint'), pips: $(root, '#pips'), gemDot: $(root, '#gemDot'), gemLbl: $(root, '#gemLbl'), gemSub: $(root, '#gemSub'), noiseBar: $(root, '#noiseBar'), lightBar: $(root, '#lightBar'), lightPct: $(root, '#lightPct'), bar: $(root, '#bar'), prompt: $(root, '#prompt'), toasts: $(root, '#toasts'), marks: $(root, '#marks'), vig: $(root, '#vig') };
+    this.el = { objs: $(root, '#objList'), alert: $(root, '#alert'), mini: $(root, '#mini'), zone: $(root, '#zone'), disg: $(root, '#disg'), dName: $(root, '#dName'), dState: $(root, '#dState'), dCover: $(root, '#dCover'), dHint: $(root, '#dHint'), pips: $(root, '#pips'), gemDot: $(root, '#gemDot'), gemLbl: $(root, '#gemLbl'), gemSub: $(root, '#gemSub'), lightBar: $(root, '#lightBar'), lightPct: $(root, '#lightPct'), bar: $(root, '#bar'), prompt: $(root, '#prompt'), toasts: $(root, '#toasts'), marks: $(root, '#marks'), vig: $(root, '#vig') };
     this.mctx = this.el.mini.getContext('2d');
     this.marks = new Map(); this.miniT = 0; this.objSig = ''; this.barSig = ''; this.noiseVis = 0; this.lightVis = 0; this.isTouch = false;
   }
@@ -61,18 +61,18 @@ export class UI {
       <b>Move</b><span>Drag on the left half of the screen (floating stick)</span>
       <b>Action</b><span>The big gold button: context action (take down, hack, hide, loot…). Hold for long actions</span>
       <b>Crouch / slide</b><span>Crouch button (tap while running to slide under lasers)</span>
-      <b>Run</b><span>Toggle run (loud!)</span>
+      <b>Run</b><span>Toggle run (faster, but easier to spot)</span>
       <b>Gadget / Fire</b><span>Cycle gadgets, then Fire to throw or shoot in front of you</span>
       <b>Camera</b><span>Use ⟲ ⟳ or twist two fingers; pinch to zoom</span>` : `
       <b>WASD / arrows</b><span>Move (relative to the camera)</span>
-      <b>Shift</b><span>Run (loud)</span><b>C</b><span>Crouch. While running: slide under laser beams</span>
+      <b>Shift</b><span>Run</span><b>C</b><span>Crouch. While running: slide under laser beams</span>
       <b>Space</b><span>Jump (hop low laser beams)</span>
       <b>F</b><span>Context action: take down, hack, hide, loot… (hold for long actions)</span>
       <b>1 / 2 / 3, Tab</b><span>Dart pistol / Coin / EMP. Left-click fires at the cursor</span>
       <b>G</b><span>Night-vision goggles (reveal hidden lasers)</span>
       <b>Q / E, right-drag</b><span>Rotate camera. R/T tilt, wheel zoom</span>
       <b>M</b><span>Mute music</span><b>Esc</b><span>Pause</span>`}</div></div>
-      <div class="panel" style="margin-top:10px"><h3>How to stay hidden</h3><ul><li>Light matters: the gem shows how visible you are. Stay in shadow, crouch, and move slowly.</li><li>Guards hear footsteps. Carpet is quiet, marble is loud. Coins and darts make distractions.</li><li>Disguises let you walk through the right zones: the panel on the map tells you if you belong.</li><li>Shoot out lamps with darts or cut the breaker to plunge a wing into darkness.</li></ul></div>
+      <div class="panel" style="margin-top:10px"><h3>How to stay hidden</h3><ul><li>Light matters: the gem shows how visible you are. Stay in shadow, crouch, and move slowly.</li><li>Footsteps are silent to guards, but slides, landings, work noises and gunfire are not. Coins make distractions.</li><li>Disguises let you walk through the right zones: the panel on the map tells you if you belong.</li><li>Shoot out lamps with darts or cut the breaker to plunge a wing into darkness.</li></ul></div>
       <button class="btn" id="bk">Back</button></div>`;
     $(this.screenEl, '#bk').onclick = back;
   }
@@ -155,9 +155,7 @@ export class UI {
     this.el.gemDot.style.background = `radial-gradient(circle, ${st[1]} ${Math.round(expo * 65)}%, #000 100%)`; this.el.gemDot.style.borderColor = st[1]; this.el.gemDot.style.color = st[1];
     this.lightVis += (expo - this.lightVis) * Math.min(1, dt * 10);
     this.el.lightBar.style.width = (this.lightVis * 100).toFixed(0) + '%'; this.el.lightBar.style.background = st[1]; this.el.lightPct.textContent = (this.lightVis * 100).toFixed(0) + '%';
-    this.el.gemSub.textContent = p.inVent ? 'In the vents: undetectable' : p.carrying ? 'Carrying a body' : p.slide ? 'Sliding' : p.running ? 'Running: loud' : p.stance === 'crouch' ? 'Crouched: quiet' : p.speed > 0.3 ? 'Walking' : 'Standing still';
-    const noise = p.inVent ? 0.08 : p.running ? 1 : p.speed < 0.3 ? 0 : p.stance === 'crouch' ? 0.18 : 0.42;
-    this.noiseVis += (noise - this.noiseVis) * Math.min(1, dt * 8); this.el.noiseBar.style.width = (this.noiseVis * 100).toFixed(0) + '%'; this.el.noiseBar.style.background = this.noiseVis > 0.7 ? '#ff7a58' : '#7ab8ff';
+    this.el.gemSub.textContent = p.inVent ? 'In the vents: undetectable' : p.carrying ? 'Carrying a body' : p.slide ? 'Sliding' : p.running ? 'Running' : p.stance === 'crouch' ? 'Crouched' : p.speed > 0.3 ? 'Walking' : 'Standing still';
     // gadget bar
     const bsig = GADGETS.map(n => p.inv[GADGET_INFO[n].key]).join(',') + '|' + p.gadget + '|' + p.nvg + '|' + p.inv.keycard + '|' + p.inv.loot + '|' + p.inv.lootValue;
     if (bsig !== this.barSig) {

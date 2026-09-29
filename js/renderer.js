@@ -5,6 +5,7 @@ import { RenderPass } from '../vendor/RenderPass.js';
 import { UnrealBloomPass } from '../vendor/UnrealBloomPass.js';
 import { ShaderPass } from '../vendor/ShaderPass.js';
 import { OutputPass } from '../vendor/OutputPass.js';
+import { FXAAShader } from '../vendor/FXAAShader.js';
 import { WALL_H } from './config.js';
 import { shared, makeLightTextures } from './materials.js';
 import * as Env from './envkit.js';
@@ -66,12 +67,15 @@ export class Renderer {
     this.composer.addPass(this.bloom);
     this.grade = new ShaderPass(GRADE_SHADER); this.composer.addPass(this.grade);
     this.composer.addPass(new OutputPass());
+    // phones render without MSAA (memory/perf), so thin floor detail would crawl when moving: smooth it with FXAA
+    if (this.coarse) { this.fxaa = new ShaderPass(FXAAShader); this.composer.addPass(this.fxaa); }
   }
 
   resize() {
     const w = window.innerWidth, h = window.innerHeight;
     this.gl.setSize(w, h, false);
     this.composer.setSize(w, h);
+    if (this.fxaa) { const pr = this.gl.getPixelRatio(); this.fxaa.material.uniforms['resolution'].value.set(1 / (w * pr), 1 / (h * pr)); }
     this.camera.aspect = w / h; this.camera.updateProjectionMatrix();
   }
 
