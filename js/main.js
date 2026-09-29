@@ -3,11 +3,15 @@ import { loadModels } from './models.js';
 import { Game } from './game.js';
 import { UI } from './ui.js';
 import { initAudio } from './audio.js';
+import { setupTouch, isTouchDevice } from './touch.js';
 
 const ui = new UI();
 const world = new World(document.getElementById('c'));
 const game = new Game(world, ui);
 window.game = game; window.world = world; // handy for debugging / automated tests
+
+let touchUI = null;
+if (isTouchDevice()) { touchUI = setupTouch(game, ui, { initAudio }); ui.isTouch = true; }
 
 const SKILL_KEYS = { '1': 'q', '2': 'w', '3': 'e', '4': 'r' };
 const canvas = document.getElementById('c');
@@ -42,6 +46,7 @@ window.addEventListener('keydown', ev => {
 });
 window.addEventListener('keyup', ev => { const k = ev.key.toLowerCase(); game.keys.delete(k); if (k === 'shift') game.mouse.shift = false; });
 
+document.getElementById('invClose').onclick = () => { ui.closeInv(); game.paused = false; };
 ui.onStart = () => { initAudio(); ui.closeInv(); game.paused = false; game.newRun(); };
 
 // hover detection for the target bar
@@ -60,6 +65,7 @@ function loop(now) {
     updateHover();
     game.update(dt);
     ui.update(game, dt);
+    if (touchUI) touchUI.update();
     ui.updateFloaters(world, dt);
     world.frame(dt, game.hero);
   } else {

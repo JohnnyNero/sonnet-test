@@ -138,7 +138,9 @@ class Particles {
 export class World {
   constructor(canvas) {
     const r = this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    this.coarse = coarse;
+    r.setPixelRatio(Math.min(window.devicePixelRatio || 1, coarse ? 1.5 : 2));
     r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
     r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.15;
     this.scene = new THREE.Scene();
@@ -151,7 +153,7 @@ export class World {
 
     this.scene.add(new THREE.HemisphereLight(0x8a92c8, 0x2a2034, 1.0));
     const moon = this.moon = new THREE.DirectionalLight(0xaab4ff, 1.15);
-    moon.castShadow = true; moon.shadow.mapSize.set(2048, 2048);
+    moon.castShadow = true; moon.shadow.mapSize.set(coarse ? 1024 : 2048, coarse ? 1024 : 2048);
     const sc = moon.shadow.camera; sc.left = -16; sc.right = 16; sc.top = 16; sc.bottom = -16; sc.near = 1; sc.far = 50;
     moon.shadow.bias = -0.0004; moon.shadow.normalBias = 0.04;
     this.scene.add(moon, moon.target);

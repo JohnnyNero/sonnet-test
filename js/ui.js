@@ -51,11 +51,16 @@ export class UI {
     o.classList.remove('clear');
     if (kind === 'title') {
       this.el.hud.classList.add('hidden');
+      const controls = this.isTouch
+        ? `<tr><td>Move</td><td>Drag anywhere on the <b>left</b> side (floating joystick)</td></tr>
+          <tr><td>Fight</td><td>Hold <b>ATTACK</b> for the staff strike. The four round buttons cast Firebolt, Frost Nova, Chain Lightning and Oil Flask, and aim at the nearest enemy you're facing</td></tr>
+          <tr><td>Other</td><td><b>Bag</b> for inventory &middot; <b>?</b> for the reaction list. Landscape works best</td></tr>`
+        : `<tr><td>Move / attack</td><td>Hold <b>left mouse</b> (or WASD) &middot; click a monster to fight it</td></tr>
+          <tr><td>Skills</td><td><b>1</b> Firebolt &middot; <b>2</b> Frost Nova &middot; <b>3</b> Chain Lightning &middot; <b>4</b> Oil Flask &middot; right-click = Firebolt</td></tr>
+          <tr><td>Other</td><td><b>I</b> inventory &middot; <b>H</b> reaction list &middot; <b>Shift</b> hold position</td></tr>`;
       c.innerHTML = `<h1>CINDER CRYPT</h1><div class="sub">Everything down here burns, floods, freezes, and conducts.</div>
         <table>
-          <tr><td>Move / attack</td><td>Hold <b>left mouse</b> (or WASD) &middot; click a monster to fight it</td></tr>
-          <tr><td>Skills</td><td><b>1</b> Firebolt &middot; <b>2</b> Frost Nova &middot; <b>3</b> Chain Lightning &middot; <b>4</b> Oil Flask &middot; right-click = Firebolt</td></tr>
-          <tr><td>Other</td><td><b>I</b> inventory &middot; <b>H</b> reaction list &middot; <b>Shift</b> hold position</td></tr>
+          ${controls}
           <tr><td>The trick</td><td>The floor is alive. Douse them in oil, then light it. Lure them into water, then zap it. Freeze what's wet, then shatter it.</td></tr>
         </table><button class="go" id="goBtn">Descend</button><div class="seed">Three floors. One Grave King. Every crypt is generated fresh.</div>`;
     } else if (kind === 'dead') {
@@ -128,9 +133,12 @@ export class UI {
   renderInventory(g) {
     if (!g.equipped) return;
     const rc = it => RARITY[it.rarity].color;
-    const cell = (it, extra = '') => `<div class="cell" ${extra}><div class="sl">${it.slot}</div><div class="nm" style="color:${rc(it)}">${it.name}</div><div style="color:#9a917f">${it.affixes.length ? it.affixes.length + ' affix' + (it.affixes.length > 1 ? 'es' : '') : 'no affixes'}</div></div>`;
+    const detail = it => this.isTouch
+      ? describe(it).map(l => `<div style="color:#9fb6ff;font-size:11px">${l}</div>`).join('') || '<div style="color:#7d7566;font-size:11px">no bonuses</div>'
+      : `<div style="color:#9a917f">${it.affixes.length ? it.affixes.length + ' affix' + (it.affixes.length > 1 ? 'es' : '') : 'no affixes'}</div>`;
+    const cell = (it, extra = '', del = false) => `<div class="cell" ${extra}>${del ? '<button class="del" title="Discard">✕</button>' : ''}<div class="sl">${it.slot}</div><div class="nm" style="color:${rc(it)}">${it.name}</div>${detail(it)}</div>`;
     this.el.slots.innerHTML = SLOTS.map(s => { const it = g.equipped[s]; return it ? cell(it, `data-eq="${s}" data-uid="${it.uid}"`) : `<div class="cell empty"><div class="sl">${s}</div>empty</div>`; }).join('');
-    this.el.bag.innerHTML = g.bag.length ? g.bag.map(it => cell(it, `data-uid="${it.uid}"`)).join('') : '<div style="color:#5d556b;font-size:12px">Nothing yet. Monsters, chests and elites drop gear.</div>';
+    this.el.bag.innerHTML = g.bag.length ? g.bag.map(it => cell(it, `data-uid="${it.uid}"`, true)).join('') : '<div style="color:#5d556b;font-size:12px">Nothing yet. Monsters, chests and elites drop gear.</div>';
     const s = g.hero.stats, L = [];
     L.push(`Life <b>${g.hero.maxHp}</b>`, `Staff damage <b>${10 + s.weaponDmg}</b>`);
     if (s.armor) L.push(`Armor <b>${s.armor}</b>`);
@@ -146,6 +154,8 @@ export class UI {
       n.onmouseleave = () => this.hideTip();
       n.onclick = () => { this.hideTip(); n.dataset.eq ? g.unequip(n.dataset.eq) : g.equip(it.uid); };
       n.oncontextmenu = ev => { ev.preventDefault(); this.hideTip(); if (!n.dataset.eq) g.discard(it.uid); };
+      const del = n.querySelector('.del');
+      if (del) del.onclick = ev => { ev.stopPropagation(); g.discard(it.uid); };
     });
   }
   showTip(it, ev) {

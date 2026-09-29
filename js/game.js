@@ -39,6 +39,7 @@ export class Game {
     this.state = 'title';
     this.mouse = { x: 0, y: 0, down: false, gx: 0, gy: 0 };
     this.keys = new Set();
+    this.touch = { active: false, mx: 0, my: 0, attack: false };
     this.time = 0;
     this.hoverEnemy = null;
     this.paused = false;
@@ -298,6 +299,7 @@ export class Game {
     h.hp = Math.min(h.hp, h.maxHp);
   }
   cdMul() { return 1 - clamp(this.hero.stats.cdr, 0, 60) / 100; }
+  skillCd(k) { return SK[k].cd * this.cdMul(); }
 
   // ------------------------------------------------------------------ status effects + reactions
   ignite(e, dur = 3.2, mult = 1) {
@@ -541,6 +543,7 @@ export class Game {
     if (h.dead || this.state !== 'play') return;
     if (h.st.frozen > 0 || h.st.stun > 0) return;
     if (h.cd[k] > 0) return;
+    if (this.touch.active) this.aimAssist();
     const gx = this.mouse.gx, gy = this.mouse.gy;
     let dx = gx - h.x, dy = gy - h.y; const dl = Math.hypot(dx, dy) || 1; dx /= dl; dy /= dl;
     h.face = Math.atan2(dx, dy); h.cast = 0.35;
@@ -567,6 +570,22 @@ export class Game {
       const tx = h.x + dx * d, ty = h.y + dy * d;
       this.fireProjectile({ team: 'hero', kind: 'flask', lob: true, sx: h.x, sy: h.y, tx, ty, x: h.x, y: h.y, dur: 0.35 + d * 0.04, t: 0, color: 0x6a4a8a, size: 0.17, dmg: 0, r: 0.1, life: 5 });
     }
+  }
+
+  // Touch has no cursor: aim at the best nearby enemy (prefer the one we're facing), else straight ahead.
+  aimAssist() {
+    const h = this.hero, fx = Math.sin(h.face), fy = Math.cos(h.face);
+    let best = null, bs = -1e9;
+    for (const e of this.enemies) {
+      if (e.dead) continue;
+      const d = dist(h.x, h.y, e.x, e.y);
+      if (d > 11 || !hasLOS(this.level.tiles, h.x, h.y, e.x, e.y)) continue;
+      const facing = ((e.x - h.x) * fx + (e.y - h.y) * fy) / (d || 1);
+      const score = facing * 6 - d;
+      if (score > bs) { bs = score; best = e; }
+    }
+    if (best && (bs > -9)) { this.mouse.gx = best.x; this.mouse.gy = best.y; }
+    else { this.mouse.gx = h.x + fx * 6; this.mouse.gy = h.y + fy * 6; }
   }
 
   castLightning(dx, dy) {
@@ -707,7 +726,17 @@ export class Game {
     let wx = 0, wy = 0, moving = false, attackTarget = null;
     const kx = (this.keys.has('d') || this.keys.has('arrowright') ? 1 : 0) - (this.keys.has('a') || this.keys.has('arrowleft') ? 1 : 0);
     const ky = (this.keys.has('s') || this.keys.has('arrowdown') ? 1 : 0) - (this.keys.has('w') || this.keys.has('arrowup') ? 1 : 0);
-    if (this.mouse.down && !this.ui.invOpen) {
+    const T = this.touch;
+    if (T.active && !this.ui.invOpen) {
+      if (T.attack) {
+        let best = null, bd = 7;
+        for (const e of this.enemies) { if (e.dead) continue; const d = dist(h.x, h.y, e.x, e.y); if (d < bd && hasLOS(this.level.tiles, h.x, h.y, e.x, e.y)) { bd = d; best = e; } }
+        for (const b of this.barrels) { if (b.dead) continue; const d = dist(h.x, h.y, b.x, b.y); if (d < 2.2 && d < bd) { bd = d; best = b; } }
+        if (best) attackTarget = best;
+      }
+      if (!attackTarget && (T.mx || T.my)) { wx = T.mx; wy = T.my; moving = true; }
+    }
+    if (this.mouse.down && !this.ui.invOpen && !T.active) {
       // enemy or barrel under the cursor?
       let best = null, bd = 1.0;
       for (const e of this.enemies) { if (e.dead) continue; const d = dist(this.mouse.gx, this.mouse.gy, e.x, e.y) - e.r; if (d < bd) { bd = d; best = e; } }
@@ -737,7 +766,7 @@ export class Game {
         if (h.cd.atk <= 0 && !h.atk) this.meleeAttack();
       }
     }
-    if (!moving && (kx || ky)) { const l = Math.hypot(kx, ky); wx = kx / l; wy = ky / l; moving = true; }
+    if (!moving && !attackTarget && (kx || ky)) { const l = Math.hypot(kx, ky); wx = kx / l; wy = ky / l; moving = true; }
 
     let speed = 4.7 * (1 + h.stats.speed / 100);
     if (h.st.chill > 0) speed *= 0.6;

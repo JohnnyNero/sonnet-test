@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#08060c">
 <title>Cinder Crypt</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='13' font-size='14'%3E%F0%9F%94%A5%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="css/style.css">
@@ -36,7 +39,7 @@
 </div>
 
 <div id="inv" class="hidden">
-  <div class="invhead"><h3>Equipment</h3><span class="hint">click to equip &middot; right-click to discard &middot; I to close</span></div>
+  <div class="invhead"><h3>Equipment</h3><span class="hint">tap to equip &middot; &#10005; to discard &middot; I to close</span><button id="invClose" class="xbtn">&#10005;</button></div>
   <div class="invbody">
     <div class="slots" id="slots"></div>
     <div class="stats" id="statlist"></div>
@@ -46,6 +49,7 @@
 </div>
 <div id="tip" class="hidden"></div>
 
+<div id="rotate">Rotate your device to landscape for the best view</div>
 <div id="overlay">
   <div class="card" id="ovCard">
     <div id="loadText">Loading the crypt…</div>

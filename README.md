@@ -20,7 +20,13 @@ python3 -m http.server 8000     # then open http://localhost:8000
 | **I** | Inventory (click to equip, right-click to discard) |
 | **H** | Toggle the reaction list · **Shift** hold position |
 
+**On a phone or tablet** (landscape works best): drag on the left half for a floating joystick, hold **ATTACK** for the staff strike, and tap the four round buttons for skills, which aim at the nearest enemy you're facing. **Bag** opens the inventory, **?** shows the reaction list.
+
 Three floors, then the Grave King. Each crypt is generated from a seed. Death is permanent.
+
+## Deploying
+
+`.github/workflows/pages.yml` publishes the static site to GitHub Pages on every push to `main` (or on demand from the Actions tab). One-time setup: **Settings → Pages → Source: GitHub Actions**. Only `index.html`, `css/`, `js/`, `vendor/` and `assets/` are shipped.
 
 ## The surface reactions
 
